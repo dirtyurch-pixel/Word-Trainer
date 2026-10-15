@@ -1,0 +1,25 @@
+{
+ "name": "Word Meaning Trainer",
+ "short_name": "Word Trainer",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "any",
+ "background_color": "#eef2f0",
+ "theme_color": "#0b6b60",
+ "description": "Learn word meanings, Qur'anic vocabulary and Moroccan Arabic.",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any maskable"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ]
+}
