@@ -2349,12 +2349,51 @@ $("finder-close").onclick = () => { finderRun++; $("finder-card").hidden = true;
 
 /* Dictionary definitions, fetched when opened (GitHub version only) */
 const dictCache = {};
+const POS = /^(Noun|Verb|Adjective|Adverb|Pronoun|Preposition|Conjunction|Interjection|Proper noun|Phrase|Prefix|Suffix|Numeral|Determiner|Article|Particle)$/i;
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
+/* Wiktionary: fetch the rendered page and read the English definitions out of it */
+async function fromWiktionary(word){
+  for (const title of [...new Set([word.toLowerCase(), word])]){
+    const u = "https://en.wiktionary.org/w/api.php?action=parse&format=json&formatversion=2&redirects=1&prop=text&origin=*&page=" + encodeURIComponent(title);
+    const d = await (await withTimeout(fetch(u), 12000)).json();
+    if (!d.parse || !d.parse.text) continue;
+    const doc = new DOMParser().parseFromString(d.parse.text, "text/html");
+    const anchor = doc.getElementById("English"); if (!anchor) continue;
+    let el = anchor.closest(".mw-heading") || anchor.closest("h2") || anchor;
+    const meanings = []; let pos = null;
+    for (el = el.nextElementSibling; el; el = el.nextElementSibling){
+      if (el.matches("h2, .mw-heading2")) break;
+      const h = el.matches("h3, h4, h5") ? el : el.querySelector(":scope > h3, :scope > h4, :scope > h5");
+      if (h){ const t = h.textContent.replace(/\[edit\]/, "").trim(); pos = POS.test(t) ? t : null; continue; }
+      if (pos && el.tagName === "OL"){
+        const defs = [];
+        for (const li of el.children){
+          const c = li.cloneNode(true); c.querySelectorAll("dl, ul, ol, sup, .HQToggle, .nyms, style").forEach(n => n.remove());
+          const text = c.textContent.replace(/\s+/g, " ").trim(); if (!text) continue;
+          const ex = li.querySelector(":scope > dl > dd"); let example = ex ? ex.textContent.replace(/\s+/g, " ").trim() : "";
+          if (example.length > 180 || /^(Synonym|Antonym|Hypernym|Hyponym)s?:/i.test(example)) example = "";
+          defs.push({definition:text, example}); if (defs.length >= 3) break;
+        }
+        if (defs.length) meanings.push({partOfSpeech:pos.toLowerCase(), definitions:defs});
+        pos = null;
+      }
+    }
+    if (meanings.length) return [{meanings:meanings.slice(0, 4), source:"Wiktionary"}];
+  }
+  return null;
+}
+async function fromFreeDictionary(word){
+  const r = await withTimeout(fetch("https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(word.toLowerCase())), 8000);
+  if (r.status === 404) return [];
+  if (!r.ok) throw new Error("http " + r.status);
+  return (await r.json()).map(e => ({...e, source:"the Free Dictionary"}));
+}
 async function loadDict(word){
   if (dictCache[word]) return dictCache[word];
-  const r = await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(word.toLowerCase()));
-  if (r.status === 404) return dictCache[word] = [];
-  if (!r.ok) throw new Error("http " + r.status);
-  return dictCache[word] = await r.json();
+  let res = null, err = null;
+  try { res = await fromWiktionary(word); } catch(e){ err = e; }
+  if (!res){ try { res = await fromFreeDictionary(word); } catch(e){ if (err) throw e; res = []; } }
+  return dictCache[word] = res;
 }
 function dictHTML(word, entries){
   const mw = `<a href="https://www.merriam-webster.com/dictionary/${encodeURIComponent(word)}" target="_blank" rel="noopener">Merriam-Webster</a>`;
@@ -2365,7 +2404,7 @@ function dictHTML(word, entries){
   for (const e of entries.slice(0, 2)) for (const m of (e.meanings || []).slice(0, 3)){
     h += `<div class="dictm"><div class="dt">${esc(m.partOfSpeech || "")}</div><ol>${(m.definitions || []).slice(0, 3).map(d => `<li>${esc(d.definition)}${d.example ? `<br><i>${esc(d.example)}</i>` : ""}</li>`).join("")}</ol>${(m.synonyms || []).length ? `<p class="note">Similar: ${esc(m.synonyms.slice(0, 6).join(", "))}</p>` : ""}</div>`;
   }
-  return h + `<p class="note">From Wiktionary, through the Free Dictionary API. See also ${mw}.</p>`;
+  return h + `<p class="note">From ${esc(entries[0].source || "Wiktionary")}. See also ${mw}.</p>`;
 }
 document.addEventListener("toggle", async e => {
   const d = e.target; if (!d.classList || !d.classList.contains("dict") || !d.open || d.dataset.loaded) return;
