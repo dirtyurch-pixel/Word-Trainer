@@ -238,6 +238,14 @@ details.cat .catlist{margin-top:6px}
       <div><label for="goal">Words to answer each day</label><input type="number" id="goal" min="1" max="100" step="1"></div>
       <p class="note">A day counts towards your streak when you reach the goal.</p>
     </div>
+    <div class="card" id="backup-card">
+      <h2>Back up and move your progress</h2>
+      <p class="note">Save your progress, your own words and your pictures to one file. Load that file on another device to carry everything across, or to get it back after clearing the browser.</p>
+      <p class="note" id="store-info"></p>
+      <div class="row"><button class="btn primary" id="bk-save">Save backup</button><button class="btn" id="bk-load">Load backup</button></div>
+      <input type="file" id="bk-file" accept=".json,application/json" hidden>
+      <p class="note" id="bk-msg" role="status" hidden></p>
+    </div>
     <div class="card" id="coach-card">
       <h2>How you're doing and how to improve</h2>
       <p id="coach-out" class="note">Claude reads your answers and results, then explains where your understanding is strong, where it slips, and what to do about it.</p>
@@ -1675,7 +1683,7 @@ const canSpeak = "speechSynthesis" in window && typeof SpeechSynthesisUtterance 
 
 let S = {progress:{}, custom:[], days:{}, goal:10, topic:"", rev:false, set:null};
 let sample = null, stateDoc = null, saveChain = Promise.resolve(), dbFailed = false;
-let pics = {}, userCol = null, picFor = null, pasteFor = null, pasteErr = "";
+let downloads = null, pics = {}, userCol = null, picFor = null, pasteFor = null, pasteErr = "";
 let cur = null, lastWord = null, mode = "ask", result = null, ctl = null, hints = 0, sent = {state:"idle"}, found = [];
 
 const key = w => w.word.toLowerCase();
@@ -1715,7 +1723,7 @@ function clean(d){
   return out;
 }
 function save(){
-  try { localStorage.setItem(LS, JSON.stringify(S)); } catch(e){}
+  try { localStorage.setItem(LS, JSON.stringify(S)); } catch(e){ storeWarn("Your progress could not be saved because this browser's storage is full. Save a backup, then remove some of your own pictures."); }
   if (stateDoc && !dbFailed){
     const body = JSON.parse(JSON.stringify(S));
     saveChain = saveChain.then(() => stateDoc.set(body)).catch(() => { dbFailed = true; $("save-note").hidden = false; });
@@ -2077,16 +2085,83 @@ $("search").addEventListener("input", renderList);
 /* Your own pictures: shrunk in the browser, then saved privately with your progress */
 const PLS = "wt-pic:";
 const picId = k => "pic-" + k.replace(/[^a-z0-9]+/g, "-").slice(0,60) + "-" + [...k].reduce((h,c) => (h*31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
+/* Pictures are kept in the browser's database (IndexedDB), which has far more room than ordinary storage. */
+let idbP = null;
+function idbOpen(){
+  return idbP || (idbP = new Promise((res, rej) => {
+    try { const r = indexedDB.open("word-trainer", 1); r.onupgradeneeded = () => r.result.createObjectStore("pics"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }
+    catch(e){ rej(e); }
+  }));
+}
+async function idb(mode, fn){
+  const db = await idbOpen();
+  return new Promise((res, rej) => { const tx = db.transaction("pics", mode), req = fn(tx.objectStore("pics")); tx.oncomplete = () => res(req && req.result); tx.onerror = tx.onabort = () => rej(tx.error); });
+}
+function storeWarn(msg){ const m = $("store-info"); if (m){ m.textContent = msg; m.className = "err"; } $("save-note").hidden = false; $("save-note").textContent = msg; }
+async function showStorage(){
+  const n = Object.keys(pics).length, m = $("store-info"); if (!m || m.className === "err") return;
+  let txt = n + (n === 1 ? " picture" : " pictures") + " of your own saved on this device.";
+  try { if (navigator.storage && navigator.storage.estimate){ const e = await navigator.storage.estimate(); if (e.quota) txt += " Using " + (e.usage/1e6).toFixed(1) + " MB of about " + Math.round(e.quota/1e6).toLocaleString("en-GB") + " MB available."; } } catch(e){}
+  m.textContent = txt;
+}
 function savePic(k, url){
   pics[k] = url;
-  try { localStorage.setItem(PLS + k, url); } catch(e){}
+  idb("readwrite", st => st.put(url, k)).then(() => { try { localStorage.removeItem(PLS + k); } catch(e){} showStorage(); })
+    .catch(() => { try { localStorage.setItem(PLS + k, url); showStorage(); } catch(e){ storeWarn("That picture could not be saved because this device's storage is full. Save a backup, then remove some pictures."); } });
   if (userCol) userCol.doc(picId(k)).set({word:k, img:url}).catch(() => { $("save-note").hidden = false; });
 }
 function removePic(k){
   delete pics[k];
+  idb("readwrite", st => st.delete(k)).catch(() => {});
   try { localStorage.removeItem(PLS + k); } catch(e){}
   if (userCol) userCol.doc(picId(k)).delete().catch(() => {});
+  showStorage();
 }
+async function loadPics(){
+  try {
+    const [keys, vals] = await Promise.all([idb("readonly", st => st.getAllKeys()), idb("readonly", st => st.getAll())]);
+    keys.forEach((k, i) => { if (typeof vals[i] === "string" && vals[i].startsWith("data:image/")) pics[k] = vals[i]; });
+    for (const k of Object.keys(pics)) if (!keys.includes(k)) await idb("readwrite", st => st.put(pics[k], k));
+    for (const k of Object.keys(pics)) { try { localStorage.removeItem(PLS + k); } catch(e){} }
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  } catch(e){}
+  renderList(); if (mode !== "done" && mode !== "setdone") renderPractice(true);
+  showStorage();
+}
+
+/* Backup file: progress, own words and pictures */
+function bkMsg(t, bad){ const m = $("bk-msg"); m.textContent = t; m.className = bad ? "err" : "note"; m.hidden = false; }
+$("bk-save").onclick = async () => {
+  const data = JSON.stringify({app:"word-trainer", v:1, saved:new Date().toISOString(), S, pics});
+  const name = "word-trainer-backup-" + dayKey() + ".json";
+  if (downloads){
+    try { await downloads.save({filename:name, data:new Blob([data], {type:"application/json"})}); bkMsg("Backup saved as " + name + "."); }
+    catch(e){ if (!(e && e.code === "declined")) bkMsg("The backup could not be saved here.", true); }
+    return;
+  }
+  try {
+    const url = URL.createObjectURL(new Blob([data], {type:"application/json"})), a = document.createElement("a");
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+    bkMsg("Backup saved to your downloads as " + name + ".");
+  } catch(e){ bkMsg("The backup could not be saved on this device.", true); }
+};
+$("bk-load").onclick = () => $("bk-file").click();
+$("bk-file").addEventListener("change", e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    let b; try { b = JSON.parse(r.result); } catch(x){ return bkMsg("That file is not a Word Trainer backup.", true); }
+    if (!b || b.app !== "word-trainer" || !b.S) return bkMsg("That file is not a Word Trainer backup.", true);
+    const inc = clean(b.S), nw = Object.keys(inc.progress).length, nc = inc.custom.length;
+    S = mergeState(S, inc); save();
+    let np = 0; if (b.pics && typeof b.pics === "object") for (const k in b.pics) if (typeof b.pics[k] === "string" && b.pics[k].startsWith("data:image/")){ savePic(k, b.pics[k]); np++; }
+    renderControls(); renderMeter(); renderList(); renderGrade(); nextWord(false);
+    bkMsg("Loaded progress on " + nw + " words, " + nc + " of your own words and " + np + " pictures. Where both had the same word, the one practised more times was kept.");
+  };
+  r.onerror = () => bkMsg("That file could not be read.", true);
+  r.readAsText(f);
+});
+
 function shrinkSrc(src){
   return new Promise((res, rej) => {
     const im = new Image(); im.onerror = rej;
@@ -2208,7 +2283,6 @@ function buildOffline(){
   const state = JSON.stringify({S, pics}).replace(/</g, "\\u003c");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Word Meaning Trainer</title><style>body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style><style id="app-css">${$("app-css").textContent}</style></head><body>${PRISTINE}<script id="q-data">${$("q-data") ? $("q-data").textContent : ""}<\/script><script id="d-data">${$("d-data") ? $("d-data").textContent : ""}<\/script><script>window.OFFLINE_STATE=${state};<\/script><script id="app-js">${$("app-js").textContent}<\/script></body></html>`;
 }
-let downloads = null;
 $("off-btn").onclick = async () => {
   const b = $("off-btn"); if (!downloads) return; b.disabled = true;
   try {
@@ -2348,7 +2422,7 @@ if (OFFLINE){
 try { const raw = localStorage.getItem(LS); if (raw){ const ls = clean(JSON.parse(raw)); S = OFFLINE ? mergeState(S, ls) : ls; } } catch(e){}
 try { for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (k && k.startsWith(PLS)){ const v = localStorage.getItem(k); if (v && v.startsWith("data:image/")) pics[k.slice(PLS.length)] = v; } } } catch(e){}
 renderControls();
-nextWord(false, true); renderMeter(); renderList(); renderGrade(); syncClaude();
+nextWord(false, true); renderMeter(); renderList(); renderGrade(); syncClaude(); loadPics();
 if (location.hash === "#words" || location.hash === "#grade") show(location.hash.slice(1));
 
 (async () => {
