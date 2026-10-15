@@ -237,7 +237,7 @@ details.cat .catlist{margin-top:6px}
   .wrap{padding-inline:28px;gap:24px}
   .card{padding:32px}
   #view-words,#view-grade{display:grid;grid-template-columns:1fr 1fr;align-items:start}
-  #view-words #search,#view-words #list,#view-words #finder-card,#view-grade #coach-card{grid-column:1/-1}
+  #view-words #search,#view-words #list,#view-words #finder-card,#view-grade #coach-card,#view-grade #catgrade-card{grid-column:1/-1}
   .catlist{grid-template-columns:1fr 1fr;align-items:start}
 }
 @media (prefers-reduced-motion:no-preference){.bar i{transition:width .4s}}
@@ -284,6 +284,18 @@ body.splash-on .wrap{visibility:hidden}
 .chbox .btn b{display:block;font-size:1.1rem}
 .chbox .btn span{display:block;font-size:.8rem;opacity:.8;letter-spacing:0;font-family:var(--body)}
 #prog-card .stats b{font-family:var(--display);font-size:1.6rem;display:block;color:var(--accent)}
+.cg-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.cg{display:grid;grid-template-columns:44px 1fr auto;gap:4px 12px;align-items:center;padding:12px;border:1px solid var(--line);background:var(--bg)}
+.cg svg{width:44px;height:auto;grid-row:span 2;stroke:var(--accent);fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.cg .cn{font-family:var(--display);font-weight:600;color:var(--ink);line-height:1.25;overflow-wrap:anywhere}
+.cg .cl{font-family:var(--display);font-weight:800;font-size:1.8rem;line-height:1;color:var(--accent);grid-row:span 2;text-align:center;min-width:2.2ch;text-shadow:0 0 10px var(--glow)}
+.cg .cl small{display:block;font-family:var(--mono);font-size:.75rem;font-weight:400;color:var(--muted);text-shadow:none;margin-top:4px}
+.cg .cs{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+.cg .bar{grid-column:1/-1;height:6px}
+.cg .cgo{grid-column:1/-1;justify-self:start}
+.cg.off{opacity:.55}
+.cg .cl.wait{font-size:.8rem;font-family:var(--mono);font-weight:400;text-shadow:none;color:var(--part);max-width:9ch}
+.cg.off .cl{font-size:.8rem;font-family:var(--mono);font-weight:400;text-shadow:none;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.panel{transition:none}}
 </style>
 
@@ -387,6 +399,7 @@ body.splash-on .wrap{visibility:hidden}
   <section id="view-grade" hidden>
     <div class="card" id="prog-card"><h2 id="prog-greet">Your progress</h2><div class="stats" id="prog-stats"></div></div>
     <div class="card" id="grade-card"></div>
+    <div class="card" id="catgrade-card"><h2>Grades by category</h2><p class="note">Each category gets its own grade once you have answered 3 questions in it. Categories you have not started have no grade yet.</p><div class="cg-list" id="catgrade-list"></div></div>
     <div class="card">
       <h2>Daily goal</h2>
       <div class="stats" id="goal-stats"></div>
@@ -2848,8 +2861,26 @@ function stats(){
   const n = c + p + i;
   return {c, p, i, s, n, tried, score: n ? Math.round(100*(c + .5*p)/n) : 0};
 }
+const CAT_MIN = 3;
+function renderCatGrades(){
+  const rows = topics().filter(t => !deckOfTopic(t)).map(t => {
+    let c = 0, p = 0, i = 0, tried = 0, n = 0;
+    for (const w of allWords()){ if (w.topic !== t) continue; n++; const r = rec(w); if (!r) continue; const a = (r.c|0) + (r.p|0) + (r.i|0); if (!a) continue; tried++; c += r.c|0; p += r.p|0; i += r.i|0; }
+    const ans = c + p + i, score = ans ? Math.round(100*(c + .5*p)/ans) : 0;
+    return {t, c, p, i, ans, tried, n, score, graded: ans >= CAT_MIN};
+  });
+  rows.sort((a, b) => (b.graded - a.graded) || (b.ans > 0) - (a.ans > 0) || (a.graded ? b.score - a.score : 0));
+  $("catgrade-list").innerHTML = rows.map(x => {
+    const pc = v => x.ans ? (100*v/x.ans) + "%" : "0%";
+    const letter = x.graded ? GRADES.find(g => x.score >= g[0])[1] : "";
+    const right = x.graded ? `<span class="cl" aria-label="Grade ${letter}">${letter}<small>${x.score}%</small></span>` : `<span class="cl wait">${x.ans ? "Grade after " + CAT_MIN + " answers" : "Not started"}</span>`;
+    return `<div class="cg${x.ans ? "" : " off"}">${topicArt(x.t)}<span class="cn">${esc(x.t)}</span>${right}<span class="cs">${x.ans ? x.tried + " of " + x.n + " words tried · " + x.c + " right, " + x.p + " partly, " + x.i + " wrong" : x.n + " words"}</span>${x.ans ? `<span class="bar"><i class="k" style="width:${pc(x.c)}"></i><i class="l" style="width:${pc(x.p)}"></i><i class="b" style="width:${pc(x.i)}"></i></span>` : ""}<button class="btn small cgo" data-cg="${esc(x.t)}">${x.ans ? "Practise" : "Start"}</button></div>`;
+  }).join("");
+}
+$("catgrade-list").addEventListener("click", e => { const b = e.target.closest("[data-cg]"); if (b){ show("practice"); setTopic(b.dataset.cg); } });
 function renderGrade(){
   if (!$("view-grade").hidden) renderProg();
+  renderCatGrades();
   const st = stats(), total = allWords().length, sk = streak();
   $("goal-stats").innerHTML = `<div><div class="big">${S.days[dayKey()]|0} of ${S.goal}</div><div class="note">answered today</div></div><div><div class="big">${sk}</div><div class="note">${sk === 1 ? "day" : "days"} in a row</div></div>`;
   if (document.activeElement !== $("goal")) $("goal").value = S.goal;
@@ -2928,7 +2959,7 @@ function show(tab){
   document.querySelector(".meter").hidden = tab === "home";
   document.body.classList.toggle("home-on", tab === "home"); if ($("splash").hidden) setRain(tab === "home");
   if (tab === "home") renderHome();
-  if (tab === "grade") renderProg();
+  if (tab === "grade"){ renderProg(); renderCatGrades(); }
   if (tab === "cards") cardsOpen();
   scrollTo({top:0});
 }
