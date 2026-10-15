@@ -147,6 +147,65 @@ summary .w.ar{font-size:1.6rem;line-height:1.6;font-weight:700}
 .fopt input:focus-visible + img,.fopt input:focus-visible + .nonebox{outline:3px solid var(--accent);outline-offset:2px}
 .steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;max-width:62ch}
 .steps a{color:var(--accent)}
+.homelink{all:unset;cursor:pointer}
+.homelink:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+.hero{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px 32px;padding:24px;border-radius:16px;background:var(--accent);color:var(--on-accent)}
+.eyebrow{margin:0;font-size:.8rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.85}
+.herotitle{font-family:var(--display);font-size:clamp(1.4rem,4.5vw,2rem);margin:4px 0 0;max-width:22ch;text-wrap:balance}
+.herostats{display:flex;flex-wrap:wrap;gap:12px 24px}
+.herostats div{display:flex;flex-direction:column}
+.herostats b{font-family:var(--display);font-size:1.6rem;font-variant-numeric:tabular-nums;line-height:1.1}
+.herostats span{font-size:.8rem;opacity:.85}
+h2.sect{font-family:var(--display);font-size:1.2rem;margin:8px 0 -4px}
+.acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.act{display:flex;flex-direction:column;gap:4px;text-align:left;padding:16px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;cursor:pointer;min-height:96px}
+.act b{font-family:var(--display);font-size:1.15rem}
+.act span{color:var(--muted);font-size:.9rem}
+.act:hover{border-color:var(--accent)}
+.cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.cat-tile{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
+.cat-tile.done{border-color:var(--good)}
+.ct-main{all:unset;cursor:pointer;display:flex;flex-direction:column;gap:6px;padding:12px 12px 10px;min-width:0}
+.ct-main b{overflow-wrap:anywhere}
+.ct-main:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.ct-main b{font-family:var(--display);font-size:1.05rem}
+.ct-main span{color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+.ct-main .bar{height:8px}
+.cat-tile.done .ct-main span:first-of-type{color:var(--good);font-weight:600}
+.ct-acts{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 12px}
+.ct-acts .btn{flex:1 1 auto;padding:6px 8px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 20px;border-radius:999px;font-weight:600;z-index:20;max-width:calc(100% - 32px);text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:19;display:none}
+.cstage{position:relative;--swipe:0;perspective:1200px;display:flex;justify-content:center}
+.fcard{position:relative;width:100%;max-width:520px;min-height:340px;cursor:grab;touch-action:pan-y;transform-style:preserve-3d;transition:transform .45s}
+.fcard .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px;display:flex;flex-direction:column;justify-content:center;gap:10px;overflow:auto}
+.fcard .back{transform:rotateY(180deg)}
+.fcard.flipped .front{transform:rotateY(180deg)}
+.fcard.flipped .back{transform:rotateY(360deg)}
+.fcard .face{transition:transform .45s}
+.fcard .front{align-items:center;text-align:center}
+.fcard .pic{max-width:240px;align-self:center}
+.cword{font-family:var(--display);font-weight:700;font-size:1.5rem;margin:0}
+.ckid{margin:0;font-size:1.05rem}
+.cdef{margin:0;color:var(--muted)}
+.hint-l,.hint-r{position:absolute;top:16px;padding:6px 12px;border-radius:999px;font-weight:700;font-size:.85rem;pointer-events:none;opacity:0}
+.hint-l{left:8px;background:var(--bad-bg);color:var(--bad);opacity:calc(var(--swipe) * -1)}
+.hint-r{right:8px;background:var(--good-bg);color:var(--good);opacity:var(--swipe)}
+.cbtns{justify-content:center}
+.ccount{text-align:center;font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:no-preference){
+  .verdict{animation:pop .35s cubic-bezier(.2,1.4,.4,1)}
+  #practice-card.fx-good{animation:glow .7s ease-out}
+  #practice-card.fx-bad{animation:shake .4s ease-in-out}
+  .toast.in{animation:rise .3s ease-out}
+  .act,.cat-tile{transition:transform .15s}
+  .act:active,.ct-main:active{transform:scale(.98)}
+}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+@keyframes glow{0%{box-shadow:0 0 0 0 var(--good)}100%{box-shadow:0 0 0 14px transparent}}
+@keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+@keyframes rise{from{transform:translate(-50%,16px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+@media (prefers-reduced-motion:reduce){.fcard,.fcard .face{transition:none}}
 details.story{background:var(--bg)}
 details.story>summary{font-weight:600;padding:10px 14px;justify-content:flex-start;gap:8px}
 details.story>summary::before{content:"\25B8";color:var(--muted)}
@@ -197,13 +256,16 @@ details.cat .catlist{margin-top:6px}
 
 <div class="wrap" id="app">
   <header>
-    <h1>Word Meaning Trainer</h1>
+    <h1><button class="homelink" id="home-link">Word Meaning Trainer</button></h1>
     <div class="top">
       <div class="tabs" role="tablist">
-        <button id="tab-practice" role="tab" class="on">Practice</button>
+        <button id="tab-home" role="tab" class="on">Home</button>
+        <button id="tab-practice" role="tab">Practice</button>
+        <button id="tab-cards" role="tab">Flashcards</button>
         <button id="tab-words" role="tab">Word list</button>
         <button id="tab-grade" role="tab">My grade</button>
       </div>
+      <button class="btn small" id="snd-btn" aria-pressed="true">Sound on</button>
       <button class="btn small" id="fs-btn">Full screen</button>
       <button class="btn small" id="off-btn" hidden>Save offline copy</button>
     </div>
@@ -214,7 +276,29 @@ details.cat .catlist{margin-top:6px}
     <div class="legend"><span id="n-scope" hidden><b>Qur'anic vocabulary</b></span><span><b id="n-known">0</b> known</span><span><b id="n-learning">0</b> learning</span><span><b id="n-new">0</b> not tried yet</span><span>Today <b id="n-today">0</b> of <span id="n-goal">10</span></span><span>Streak <b id="n-streak">0</b></span></div>
   </div>
 
-  <section id="view-practice">
+  <section id="view-home">
+    <div class="hero">
+      <div><p class="eyebrow" id="home-greet">Welcome back</p><h2 class="herotitle" id="home-line"></h2></div>
+      <div class="herostats" id="home-stats"></div>
+    </div>
+    <h2 class="sect">What do you want to do?</h2>
+    <div class="acts">
+      <button class="act" data-go="practice"><b>Practice</b><span id="act-practice">Type what each word means</span></button>
+      <button class="act" data-go="cards"><b>Flashcards</b><span>Flip and swipe through a category</span></button>
+      <button class="act" data-go="words"><b>Word list</b><span>Browse, add words and pictures</span></button>
+      <button class="act" data-go="grade"><b>My grade</b><span>Your score, goal and backup</span></button>
+    </div>
+    <h2 class="sect">Categories</h2>
+    <p class="note">Each bar fills green as you learn the words and amber for ones you are still learning.</p>
+    <div class="cats" id="home-cats"></div>
+  </section>
+
+  <section id="view-cards" hidden>
+    <div class="tools"><select id="cards-sel" aria-label="Category for flashcards"></select><button class="btn small" id="cards-restart">Shuffle and restart</button></div>
+    <div id="cards-area"></div>
+  </section>
+
+  <section id="view-practice" hidden>
     <div class="tools">
       <div class="tabs" role="group" aria-label="Question type">
         <button id="m-fwd" class="on">Word to meaning</button>
@@ -305,6 +389,8 @@ details.cat .catlist{margin-top:6px}
     </div>
   </section>
 
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <canvas id="fx" aria-hidden="true"></canvas>
   <p class="note" id="save-note" hidden>Your progress is saved on this device.</p>
 </div>
 
@@ -1967,7 +2053,7 @@ function nextWord(force, quiet){
   const before = S.set;
   hints = 0; sent = {state:"idle"}; result = null;
   if (S.set && S.set.words.length && !setLeft().length){
-    if (!force){ cur = null; mode = "setdone"; renderPractice(quiet ? null : false); return; }
+    if (!force){ cur = null; mode = "setdone"; renderPractice(quiet ? null : false); if (!quiet) celebrate("Set complete!"); return; }
     S.set = null;
   }
   cur = pick(force);
@@ -1989,9 +2075,15 @@ function finish(verdict, answer, feedback){
     if (S.set.streak[k] >= NEED) p.m = 1;
   }
   if (verdict === "incorrect") p.m = 0;
-  S.progress[k] = p; S.days[dayKey()] = (S.days[dayKey()]|0) + 1; save();
+  const topicW = allWords().filter(w => w.topic === cur.topic), knownBefore = topicW.filter(w => status(w) === "known").length, dayBefore = S.days[dayKey()]|0;
+  S.progress[k] = p; S.days[dayKey()] = dayBefore + 1; save();
   mode = "result"; result = {verdict, answer, feedback}; sent = {state:"idle"};
   renderPractice(false); renderMeter(); renderList(); renderGrade();
+  const pc = $("practice-card"); pc.classList.remove("fx-good", "fx-bad"); void pc.offsetWidth; pc.classList.add(verdict === "incorrect" ? "fx-bad" : "fx-good");
+  sfx(verdict);
+  const knownAfter = topicW.filter(w => status(w) === "known").length;
+  if (knownBefore < topicW.length && knownAfter === topicW.length){ celebrate("You know every word in " + cur.topic + "!"); }
+  else if (dayBefore < S.goal && dayBefore + 1 >= S.goal){ celebrate("Daily goal reached: " + S.goal + " answers today!"); }
 }
 
 const ERR = {
@@ -2680,12 +2772,142 @@ function syncClaude(){
     out.textContent = "Claude reads your answers and results, then explains where your understanding is strong, where it slips, and what to do about it."; }
 }
 
+const VIEWS = ["home","practice","cards","words","grade"];
 function show(tab){
-  for (const t of ["practice","words","grade"]){ $("view-"+t).hidden = t !== tab; $("tab-"+t).classList.toggle("on", t === tab); }
+  for (const t of VIEWS){ $("view-"+t).hidden = t !== tab; $("tab-"+t).classList.toggle("on", t === tab); }
+  document.querySelector(".meter").hidden = tab === "home";
+  if (tab === "home") renderHome();
+  if (tab === "cards") cardsOpen();
+  scrollTo({top:0});
 }
-$("tab-practice").onclick = () => show("practice");
-$("tab-words").onclick = () => show("words");
-$("tab-grade").onclick = () => show("grade");
+for (const t of VIEWS) $("tab-"+t).onclick = () => show(t);
+$("home-link").onclick = () => show("home");
+
+/* Home page */
+function catStats(t){ const ws = allWords().filter(w => w.topic === t); let k = 0, l = 0; for (const w of ws){ const s = status(w); if (s === "known") k++; else if (s === "learning") l++; } return {n:ws.length, k, l}; }
+function renderHome(){
+  const all = allWords(), st = stats(); let k = 0; for (const w of all) if (status(w) === "known") k++;
+  const h = new Date().getHours();
+  $("home-greet").textContent = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  const today = S.days[dayKey()]|0;
+  $("home-line").textContent = today >= S.goal ? "Daily goal done. Anything more is a bonus." : today ? (S.goal - today) + " more answers to reach today's goal." : "Ready for today's " + S.goal + " words?";
+  const sk = streak();
+  $("home-stats").innerHTML = `<div><b>${fmt(k)}</b><span>of ${fmt(all.length)} known</span></div><div><b>${today}/${S.goal}</b><span>today</span></div><div><b>${sk}</b><span>${sk === 1 ? "day" : "days"} in a row</span></div>${st.n >= 5 ? `<div><b>${st.score}%</b><span>understanding</span></div>` : ""}`;
+  $("act-practice").textContent = S.set && setLeft().length ? "Carry on with " + S.set.topic : "Type what each word means";
+  $("home-cats").innerHTML = topics().filter(t => !deckOfTopic(t)).map(t => {
+    const c = catStats(t), kp = c.n ? 100*c.k/c.n : 0, lp = c.n ? 100*c.l/c.n : 0, done = c.n && c.k === c.n;
+    return `<div class="cat-tile${done ? " done" : ""}"><button class="ct-main" data-home-words="${esc(t)}"><b>${esc(t)}</b><span>${done ? "All " + c.n + " known" : c.k + " of " + c.n + " known"}</span><span class="bar"><i class="k" style="width:${kp}%"></i><i class="l" style="width:${lp}%"></i></span></button><div class="ct-acts"><button class="btn small" data-home-practice="${esc(t)}">Practise</button><button class="btn small" data-home-cards="${esc(t)}">Flashcards</button></div></div>`;
+  }).join("");
+}
+$("view-home").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.go){ if (b.dataset.go === "practice" && !S.topic && !S.set) setTopic(""); show(b.dataset.go); return; }
+  if (b.dataset.homePractice){ show("practice"); setTopic(b.dataset.homePractice); return; }
+  if (b.dataset.homeCards){ cards.topic = b.dataset.homeCards; cards.list = null; show("cards"); return; }
+  if (b.dataset.homeWords){ const t = b.dataset.homeWords; openCats.add(t); show("words"); renderList(); const d = [...document.querySelectorAll("#list details.cat")].find(x => x.dataset.t === t); if (d) d.scrollIntoView({block:"start"}); }
+});
+
+/* Sound effects, made in the browser so there are no files to load */
+let sfxOn = true, sfxCtx = null;
+try { sfxOn = localStorage.getItem("wt-sound") !== "off"; } catch(e){}
+function syncSndBtn(){ $("snd-btn").textContent = sfxOn ? "Sound on" : "Sound off"; $("snd-btn").setAttribute("aria-pressed", sfxOn); }
+$("snd-btn").onclick = () => { sfxOn = !sfxOn; try { localStorage.setItem("wt-sound", sfxOn ? "on" : "off"); } catch(e){} syncSndBtn(); if (sfxOn) sfx("correct"); };
+const SFX = {correct:[[784,0,.12,"triangle"],[1047,.09,.22,"triangle"]], partial:[[659,0,.2,"triangle"]], incorrect:[[233,0,.16,"sine"],[196,.13,.26,"sine"]], flip:[[520,0,.06,"sine"]], win:[[523,0,.14,"triangle"],[659,.1,.14,"triangle"],[784,.2,.14,"triangle"],[1047,.3,.4,"triangle"]]};
+function sfx(name){
+  if (!sfxOn || !SFX[name]) return;
+  try {
+    sfxCtx = sfxCtx || new (window.AudioContext || window.webkitAudioContext)(); if (sfxCtx.state === "suspended") sfxCtx.resume();
+    const t0 = sfxCtx.currentTime + .02;
+    for (const [f, at, len, type] of SFX[name]){
+      const o = sfxCtx.createOscillator(), g = sfxCtx.createGain(); o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(0, t0 + at); g.gain.linearRampToValueAtTime(name === "incorrect" ? .12 : .18, t0 + at + .015); g.gain.exponentialRampToValueAtTime(.001, t0 + at + len);
+      o.connect(g); g.connect(sfxCtx.destination); o.start(t0 + at); o.stop(t0 + at + len + .05);
+    }
+  } catch(e){}
+}
+
+/* Celebrations: a burst of confetti and a short message */
+const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+let toastT = null;
+function toast(msg){ const t = $("toast"); t.textContent = msg; t.hidden = false; t.classList.remove("in"); void t.offsetWidth; t.classList.add("in"); clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3200); }
+function celebrate(msg){
+  toast(msg); sfx("win"); if (calm()) return;
+  const c = $("fx"), x = c.getContext("2d"), W = c.width = innerWidth * devicePixelRatio, H = c.height = innerHeight * devicePixelRatio;
+  const cs = getComputedStyle(document.documentElement), cols = ["--accent", "--marker", "--good", "--part", "--bad"].map(v => cs.getPropertyValue(v).trim() || "#0b6b60");
+  const ps = Array.from({length:140}, () => ({x:W/2 + (Math.random() - .5)*W*.3, y:H*.35, vx:(Math.random() - .5)*W*.022, vy:-Math.random()*H*.03 - H*.008, r:(4 + Math.random()*6)*devicePixelRatio, a:Math.random()*6, va:(Math.random() - .5)*.3, c:cols[Math.floor(Math.random()*cols.length)]}));
+  const t0 = performance.now(); c.style.display = "block";
+  (function frame(t){
+    const el = t - t0; x.clearRect(0, 0, W, H);
+    for (const p of ps){ p.vy += H*.0011; p.x += p.vx; p.y += p.vy; p.a += p.va; x.save(); x.translate(p.x, p.y); x.rotate(p.a); x.globalAlpha = Math.max(0, 1 - el/2200); x.fillStyle = p.c; x.fillRect(-p.r/2, -p.r/4, p.r, p.r/2); x.restore(); }
+    if (el < 2200) requestAnimationFrame(frame); else { x.clearRect(0, 0, W, H); c.style.display = "none"; }
+  })(t0);
+}
+
+/* Flashcards: flip to see the meaning, swipe right if you knew it, left if you didn't */
+const cards = {topic:"", list:null, i:0, knew:[], missed:[], flipped:false};
+function cardsOpen(){
+  const ts = topics().filter(t => !deckOfTopic(t));
+  if (!ts.includes(cards.topic)) cards.topic = ts.includes(S.topic) ? S.topic : (S.set && ts.includes(S.set.topic) ? S.set.topic : ts[0]);
+  $("cards-sel").innerHTML = ts.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join(""); $("cards-sel").value = cards.topic;
+  if (!cards.list) cardsStart();
+  else cardsRender();
+}
+function cardsStart(only){
+  const ws = only || allWords().filter(w => w.topic === cards.topic);
+  const fresh = shuffle(ws.filter(w => status(w) !== "known")), known = shuffle(ws.filter(w => status(w) === "known"));
+  cards.list = (only ? shuffle(ws) : fresh.concat(known)).map(key); cards.i = 0; cards.knew = []; cards.missed = []; cards.flipped = false;
+  cardsRender();
+}
+$("cards-sel").addEventListener("change", () => { cards.topic = $("cards-sel").value; cardsStart(); });
+$("cards-restart").onclick = () => cardsStart();
+function cardsRender(){
+  const area = $("cards-area");
+  if (cards.i >= cards.list.length){
+    const n = cards.list.length, k = cards.knew.length;
+    area.innerHTML = `<div class="card cdone"><h2>${k === n ? "You knew them all!" : "Round finished"}</h2>
+      <div class="stats"><div><div class="big">${k}</div><div class="note">knew it</div></div><div><div class="big">${cards.missed.length}</div><div class="note">didn't know</div></div></div>
+      <div class="row">${cards.missed.length ? `<button class="btn primary" data-c="again">Go again with the ${cards.missed.length} I missed</button><button class="btn" data-c="practise">Practise the missed words</button>` : ""}<button class="btn${cards.missed.length ? "" : " primary"}" data-c="restart">Start this category again</button><button class="btn" data-c="home">Choose another category</button></div></div>`;
+    if (n && k === n) celebrate("You knew every card in " + cards.topic + "!");
+    return;
+  }
+  const w = allWords().find(x => key(x) === cards.list[cards.i]); if (!w){ cards.i++; return cardsRender(); }
+  area.innerHTML = `<p class="note ccount">Card ${cards.i + 1} of ${cards.list.length} · ${cards.knew.length} knew · ${cards.missed.length} missed</p>
+    <div class="cstage"><div class="fcard${cards.flipped ? " flipped" : ""}" id="fcard" tabindex="0" role="button" aria-label="Flashcard. Tap to flip.">
+      <div class="face front"><div class="pos">${esc(w.pos)}</div><p class="head"><span>${esc(w.word)}</span></p><p class="note">Tap to see the meaning</p></div>
+      <div class="face back">${picHTML(w)}<p class="cword">${esc(w.word)}</p>${w.kid ? `<p class="ckid">${esc(w.kid)}</p>` : ""}<p class="cdef">${esc(w.def)}</p></div>
+    </div><div class="hint-l">Didn't know</div><div class="hint-r">Knew it</div></div>
+    <div class="row cbtns"><button class="btn" data-c="no">Didn't know</button><button class="btn" data-c="flip">Flip</button><button class="btn primary" data-c="yes">Knew it</button></div>
+    <p class="note">Swipe the card right if you knew it, left if you didn't. On a keyboard, use the arrow keys and the space bar.</p>`;
+  cardsDrag($("fcard"));
+}
+function cardsFlip(){ const f = $("fcard"); if (!f) return; cards.flipped = !cards.flipped; f.classList.toggle("flipped", cards.flipped); sfx("flip"); }
+function cardsDecide(knew){
+  const f = $("fcard"); if (!f || f.dataset.gone) return; f.dataset.gone = "1";
+  (knew ? cards.knew : cards.missed).push(cards.list[cards.i]); sfx(knew ? "correct" : "incorrect");
+  f.style.transition = "transform .3s ease-in, opacity .3s"; f.style.transform = `translateX(${knew ? 140 : -140}%) rotate(${knew ? 18 : -18}deg)`; f.style.opacity = "0";
+  setTimeout(() => { cards.i++; cards.flipped = false; cardsRender(); }, calm() ? 0 : 280);
+}
+function cardsDrag(el){
+  let x0 = null, dx = 0, moved = false;
+  el.addEventListener("pointerdown", e => { x0 = e.clientX; dx = 0; moved = false; el.setPointerCapture(e.pointerId); el.style.transition = "none"; });
+  el.addEventListener("pointermove", e => { if (x0 === null) return; dx = e.clientX - x0; if (Math.abs(dx) > 6) moved = true; el.style.transform = `translateX(${dx}px) rotate(${dx/18}deg)`; el.parentElement.style.setProperty("--swipe", Math.max(-1, Math.min(1, dx/120))); });
+  const up = () => { if (x0 === null) return; x0 = null; el.parentElement.style.setProperty("--swipe", 0); el.style.transition = ""; if (Math.abs(dx) > 90) return cardsDecide(dx > 0); el.style.transform = ""; if (!moved) cardsFlip(); };
+  el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up);
+  el.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter"){ e.preventDefault(); cardsFlip(); } });
+}
+$("cards-area").addEventListener("click", e => {
+  const b = e.target.closest("button[data-c]"); if (!b) return; const a = b.dataset.c;
+  if (a === "flip") cardsFlip(); else if (a === "yes") cardsDecide(true); else if (a === "no") cardsDecide(false);
+  else if (a === "again") cardsStart(cards.missed.map(k => allWords().find(w => key(w) === k)).filter(Boolean));
+  else if (a === "restart") cardsStart();
+  else if (a === "home") show("home");
+  else if (a === "practise"){ const t = cards.topic, miss = cards.missed.slice(0, 4); S.topic = t; S.set = {topic:t, words:miss, streak:{}}; save(); renderControls(); show("practice"); nextWord(false); }
+});
+document.addEventListener("keydown", e => {
+  if ($("view-cards").hidden || /INPUT|TEXTAREA|SELECT/.test((e.target.tagName || ""))) return;
+  if (e.key === "ArrowRight") cardsDecide(true); else if (e.key === "ArrowLeft") cardsDecide(false);
+});
+
 function setRev(v){ if (S.rev === v) return; S.rev = v; save(); renderControls(); nextWord(false); }
 $("m-fwd").onclick = () => setRev(false);
 $("m-rev").onclick = () => setRev(true);
@@ -2710,7 +2932,8 @@ try { const raw = localStorage.getItem(LS); if (raw){ const ls = clean(JSON.pars
 try { for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (k && k.startsWith(PLS)){ const v = localStorage.getItem(k); if (v && v.startsWith("data:image/")) pics[k.slice(PLS.length)] = v; } } } catch(e){}
 renderControls();
 nextWord(false, true); renderMeter(); renderList(); renderGrade(); syncClaude(); loadPics().then(() => { syncView(); if (sync) syncRun(true); });
-if (location.hash === "#words" || location.hash === "#grade") show(location.hash.slice(1));
+syncSndBtn();
+show(["#practice", "#words", "#grade", "#cards"].includes(location.hash) ? location.hash.slice(1) : "home");
 
 (async () => {
   if (!window.claude || !window.claude.use){ $("save-note").hidden = false; return; }
