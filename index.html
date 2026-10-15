@@ -151,6 +151,11 @@ details.story{background:var(--bg)}
 details.story>summary{font-weight:600;padding:10px 14px;justify-content:flex-start;gap:8px}
 details.story>summary::before{content:"\25B8";color:var(--muted)}
 details.story[open]>summary::before{content:"\25BE"}
+details.dict .dictbody{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px;max-width:62ch}
+.dictbody ol{margin:4px 0 0;padding-left:1.3em;display:flex;flex-direction:column;gap:4px}
+.dictbody i{color:var(--muted)}
+.dictbody a{color:var(--accent)}
+.dictph{margin:0;font-family:var(--display);font-size:1.05rem;display:flex;align-items:center;gap:10px}
 details.story>p{margin:0;padding:0 14px 14px;max-width:62ch}
 details.cat{background:none;border:0;border-radius:0}
 details.cat>summary{padding:8px 0;justify-content:flex-start;flex-wrap:wrap;gap:6px 14px}
@@ -1856,7 +1861,7 @@ function speak(word){
 function tts(word){
   try { const u = new SpeechSynthesisUtterance(word); u.lang = /[\u0600-\u06FF]/.test(word) ? "ar-SA" : "en-GB"; u.rate = .85; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch(e){}
 }
-const webLinks = w => { const q = encodeURIComponent(w.word); return `<a class="btn small" href="https://www.google.com/search?q=${q}+meaning" target="_blank" rel="noopener">Search online</a><a class="btn small" href="https://www.google.com/search?tbm=isch&q=${q}" target="_blank" rel="noopener">Find pictures</a>`; };
+const webLinks = w => { const q = encodeURIComponent(w.word); return `<a class="btn small" href="https://www.google.com/search?q=${q}+meaning" target="_blank" rel="noopener">Search online</a><a class="btn small" href="https://www.google.com/search?tbm=isch&q=${q}" target="_blank" rel="noopener">Find pictures</a>${w.deck ? "" : `<a class="btn small" href="https://www.merriam-webster.com/dictionary/${q}" target="_blank" rel="noopener">Merriam-Webster</a>`}`; };
 const hearBtn = w => canSpeak || (w.d && w.d.a && !OFFLINE) ? `<button class="btn small" data-speak="${esc(w.word)}">Hear it</button>` : "";
 function qEntry(w){
   const li = t => `<li>${esc(t[0])} <a href="https://quran.com/${esc(t[1].replace(":", "/"))}" target="_blank" rel="noopener">verse ${esc(t[1])}</a></li>`, tr = w.q.tr, more = tr.length > 8;
@@ -1869,7 +1874,7 @@ function entryHTML(w){
   if (w.d) return `<dl><div><dt>Meaning</dt><dd>${esc(w.def)}</dd></div>${w.word.includes(" / ") ? `<div><dt>The two forms</dt><dd>The slash separates two forms of the word: usually singular and plural for a noun, or past and present for a verb.</dd></div>` : ""}${w.d.pg ? `<div><dt>In the deck</dt><dd>Tagged as page ${w.d.pg} of the course the deck follows.</dd></div>` : ""}</dl>`;
   return `<dl>${w.kid ? `<div><dt>In simple words</dt><dd>${esc(w.kid)}</dd></div>` : ""}<div><dt>Meaning</dt><dd>${esc(w.def)}</dd></div>
     ${w.ex ? `<div><dt>In a sentence</dt><dd class="ex">${esc(w.ex)}</dd></div>` : ""}
-    ${w.orig ? `<div><dt>Where it comes from</dt><dd>${esc(w.orig)}</dd></div>` : ""}</dl>${STORY[w.word] ? `<details class="story"><summary>Read the story</summary><p>${esc(STORY[w.word])}</p></details>` : ""}`;
+    ${w.orig ? `<div><dt>Where it comes from</dt><dd>${esc(w.orig)}</dd></div>` : ""}</dl>${STORY[w.word] ? `<details class="story"><summary>Read the story</summary><p>${esc(STORY[w.word])}</p></details>` : ""}${typeof syncOK === "function" && syncOK() && !w.deck ? `<details class="story dict" data-dict="${esc(w.word)}"><summary>Dictionary definitions</summary><div class="dictbody"></div></details>` : ""}`;
 }
 function hintList(){
   if (cur.d && !isRev()){ const m = plain(cur.def), n = m.split(" ").length; return ["The English meaning starts with the letter " + (m[0] || "").toUpperCase() + ".", "The meaning is " + n + (n === 1 ? " word" : " words") + " long."]; }
@@ -2341,6 +2346,36 @@ $("finder-add").onclick = async () => {
 };
 $("finder-go").onclick = () => finderTopic && findPics(finderTopic);
 $("finder-close").onclick = () => { finderRun++; $("finder-card").hidden = true; };
+
+/* Dictionary definitions, fetched when opened (GitHub version only) */
+const dictCache = {};
+async function loadDict(word){
+  if (dictCache[word]) return dictCache[word];
+  const r = await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(word.toLowerCase()));
+  if (r.status === 404) return dictCache[word] = [];
+  if (!r.ok) throw new Error("http " + r.status);
+  return dictCache[word] = await r.json();
+}
+function dictHTML(word, entries){
+  const mw = `<a href="https://www.merriam-webster.com/dictionary/${encodeURIComponent(word)}" target="_blank" rel="noopener">Merriam-Webster</a>`;
+  if (!entries.length) return `<p class="note">No dictionary entry found for "${esc(word)}". It may be a name or a specialist term. Try ${mw}.</p>`;
+  const ph = entries.map(e => e.phonetic || (e.phonetics || []).map(p => p.text).find(Boolean)).find(Boolean);
+  const audio = entries.flatMap(e => e.phonetics || []).map(p => p.audio).find(Boolean);
+  let h = (ph || audio) ? `<p class="dictph">${ph ? esc(ph) : ""}${audio ? ` <button class="btn small" data-dictaudio="${esc(audio)}">Play</button>` : ""}</p>` : "";
+  for (const e of entries.slice(0, 2)) for (const m of (e.meanings || []).slice(0, 3)){
+    h += `<div class="dictm"><div class="dt">${esc(m.partOfSpeech || "")}</div><ol>${(m.definitions || []).slice(0, 3).map(d => `<li>${esc(d.definition)}${d.example ? `<br><i>${esc(d.example)}</i>` : ""}</li>`).join("")}</ol>${(m.synonyms || []).length ? `<p class="note">Similar: ${esc(m.synonyms.slice(0, 6).join(", "))}</p>` : ""}</div>`;
+  }
+  return h + `<p class="note">From Wiktionary, through the Free Dictionary API. See also ${mw}.</p>`;
+}
+document.addEventListener("toggle", async e => {
+  const d = e.target; if (!d.classList || !d.classList.contains("dict") || !d.open || d.dataset.loaded) return;
+  const box = d.querySelector(".dictbody"), word = d.dataset.dict; d.dataset.loaded = "1";
+  if (!navigator.onLine){ box.innerHTML = `<p class="note">You need to be online to load dictionary definitions.</p>`; delete d.dataset.loaded; return; }
+  box.innerHTML = `<p class="note">Loading…</p>`;
+  try { box.innerHTML = dictHTML(word, await loadDict(word)); }
+  catch(x){ box.innerHTML = `<p class="note">Could not load definitions just now. Close and open this again to retry.</p>`; delete d.dataset.loaded; }
+}, true);
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-dictaudio]"); if (!b) return; e.preventDefault(); try { new Audio(b.dataset.dictaudio).play().catch(() => {}); } catch(x){} });
 
 /* Backup file: progress, own words and pictures */
 function bkMsg(t, bad){ const m = $("bk-msg"); m.textContent = t; m.className = bad ? "err" : "note"; m.hidden = false; }
