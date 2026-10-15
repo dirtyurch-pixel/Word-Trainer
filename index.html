@@ -132,10 +132,19 @@ summary .w.ar{font-size:1.6rem;line-height:1.6;font-weight:700}
 .deckbody .cathead{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:8px}
 .deckbody{display:flex;flex-direction:column;gap:10px;margin-top:8px}
 .deckintro{max-width:60ch}
-.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
-.fitem{display:flex;flex-direction:column;gap:6px;margin:0;font-weight:600;font-size:.9rem;min-width:0}
-.fitem img{width:100%;aspect-ratio:4/3;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:10px}
-.fitem span{overflow-wrap:anywhere}
+.fsrc{border:1px solid var(--line);border-radius:10px;padding:8px 12px 10px;margin:0;display:flex;flex-wrap:wrap;gap:6px 18px}
+.fsrc legend{font-weight:600;font-size:.9rem;padding:0 4px}
+.fsrc label{display:flex;align-items:center;gap:6px;margin:0;font-weight:400}
+.fgrid{display:flex;flex-direction:column;gap:14px}
+.frow{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fw{font-family:var(--display);font-weight:700;font-size:1.05rem}
+.fopts{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.fopt{flex:none;width:130px;display:flex;flex-direction:column;gap:4px;margin:0;font-size:.75rem;color:var(--muted);cursor:pointer;position:relative}
+.fopt input{position:absolute;opacity:0;pointer-events:none}
+.fopt img,.fopt .nonebox{width:130px;height:98px;object-fit:contain;background:#fff;border:2px solid var(--line);border-radius:10px;box-sizing:border-box}
+.fopt.none{width:80px}.fopt .nonebox{width:80px;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--muted);font-weight:600;font-size:.85rem}
+.fopt input:checked + img,.fopt input:checked + .nonebox{border:3px solid var(--accent)}
+.fopt input:focus-visible + img,.fopt input:focus-visible + .nonebox{outline:3px solid var(--accent);outline-offset:2px}
 .steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;max-width:62ch}
 .steps a{color:var(--accent)}
 details.story{background:var(--bg)}
@@ -232,9 +241,16 @@ details.cat .catlist{margin-top:6px}
     </div>
     <div class="card" id="finder-card" hidden>
       <h2 id="finder-title">Find pictures</h2>
+      <fieldset class="fsrc" id="finder-src"><legend>Sources to search</legend>
+        <label><input type="checkbox" value="wp" checked> Wikipedia</label>
+        <label><input type="checkbox" value="wc" checked> Wikimedia Commons</label>
+        <label><input type="checkbox" value="ov" checked> Openverse</label>
+        <label><input type="checkbox" value="ai"> Art Institute of Chicago</label>
+      </fieldset>
+      <div class="row"><button class="btn" id="finder-go">Search again with these sources</button></div>
       <p class="note" id="finder-msg" role="status"></p>
       <div class="fgrid" id="finder-grid"></div>
-      <div class="row"><button class="btn primary" id="finder-add" hidden>Add ticked pictures</button><button class="btn" id="finder-close">Close</button></div>
+      <div class="row"><button class="btn primary" id="finder-add" hidden>Add chosen pictures</button><button class="btn" id="finder-close">Close</button></div>
     </div>
     <input type="search" id="search" placeholder="Search words or topics" aria-label="Search words or topics">
     <input type="file" id="pic-file" accept="image/*" hidden>
@@ -2228,37 +2244,67 @@ $("sync-disc").onclick = () => { sync = null; try { localStorage.removeItem(SYNC
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && sync){ clearTimeout(syncTimer); syncRun(true); } });
 addEventListener("online", () => sync && syncRun(true));
 
-/* Picture finder: looks up each word's main picture on Wikipedia (GitHub version only) */
-let finderRun = 0, finderHits = [];
-async function wikiThumbs(words){
-  const out = {};
-  for (let i = 0; i < words.length; i += 20){
-    const batch = words.slice(i, i + 20);
-    const u = "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&piprop=thumbnail&pithumbsize=480&redirects=1&titles=" + encodeURIComponent(batch.join("|"));
-    const d = await (await fetch(u)).json(), q = d.query || {}, map = {};
-    for (const w of batch) map[w] = w;
-    const follow = list => { for (const x of list || []) for (const w in map) if (map[w] === x.from) map[w] = x.to; };
-    follow(q.normalized); follow(q.redirects);
-    const byTitle = {}; for (const id in q.pages || {}){ const pg = q.pages[id]; if (pg.thumbnail && pg.thumbnail.source) byTitle[pg.title] = pg.thumbnail.source; }
-    for (const w of batch) if (byTitle[map[w]]) out[w] = byTitle[map[w]];
-    $("finder-msg").textContent = "Searching Wikipedia… " + Math.min(i + 20, words.length) + " of " + words.length + " words checked.";
-  }
-  return out;
-}
+/* Picture finder: searches several free picture sources for words with no picture (GitHub version only) */
+const SRC = {
+  wp:{name:"Wikipedia", batch:true, async find(words){
+    const out = {};
+    for (let i = 0; i < words.length; i += 20){
+      const batch = words.slice(i, i + 20), map = {};
+      const u = "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&piprop=thumbnail&pithumbsize=480&redirects=1&titles=" + encodeURIComponent(batch.join("|"));
+      const q = ((await (await fetch(u)).json()).query) || {};
+      for (const w of batch) map[w] = w;
+      const follow = list => { for (const x of list || []) for (const w in map) if (map[w] === x.from) map[w] = x.to; };
+      follow(q.normalized); follow(q.redirects);
+      const byTitle = {}; for (const id in q.pages || {}){ const pg = q.pages[id]; if (pg.thumbnail && pg.thumbnail.source) byTitle[pg.title] = pg.thumbnail.source; }
+      for (const w of batch) if (byTitle[map[w]]) out[w] = [byTitle[map[w]]];
+    }
+    return out;
+  }},
+  wc:{name:"Commons", async one(w){
+    const u = "https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=4&gsrsearch=" + encodeURIComponent(w) + "&prop=imageinfo&iiprop=url|mime&iiurlwidth=480";
+    const pages = (((await (await fetch(u)).json()).query) || {}).pages || {};
+    return Object.values(pages).sort((a, b) => (a.index || 0) - (b.index || 0)).map(p => p.imageinfo && p.imageinfo[0]).filter(x => x && x.thumburl && /^image\/(jpeg|png|gif|webp|svg)/.test(x.mime || "")).map(x => x.thumburl).slice(0, 2);
+  }},
+  ov:{name:"Openverse", async one(w){
+    const d = await (await fetch("https://api.openverse.org/v1/images/?page_size=3&mature=false&q=" + encodeURIComponent(w))).json();
+    return (d.results || []).map(r => r.thumbnail).filter(Boolean).slice(0, 2);
+  }},
+  ai:{name:"Art Institute", async one(w){
+    const d = await (await fetch("https://api.artic.edu/api/v1/artworks/search?limit=4&fields=id,image_id&q=" + encodeURIComponent(w))).json();
+    const base = (d.config && d.config.iiif_url) || "https://www.artic.edu/iiif/2";
+    return (d.data || []).filter(r => r.image_id).map(r => base + "/" + r.image_id + "/full/400,/0/default.jpg").slice(0, 2);
+  }}
+};
+const SRC_KEY = "wt-finder-src";
+let finderRun = 0, finderRows = [], finderTopic = "";
+try { const saved = JSON.parse(localStorage.getItem(SRC_KEY) || "null"); if (Array.isArray(saved)) document.querySelectorAll("#finder-src input").forEach(c => c.checked = saved.includes(c.value)); } catch(e){}
+const chosenSrc = () => [...document.querySelectorAll("#finder-src input:checked")].map(c => c.value);
+document.querySelectorAll("#finder-src input").forEach(c => c.addEventListener("change", () => { try { localStorage.setItem(SRC_KEY, JSON.stringify(chosenSrc())); } catch(e){} }));
+async function runPool(items, n, fn){ let i = 0; await Promise.all(Array.from({length:Math.min(n, items.length)}, async () => { while (i < items.length){ const k = i++; await fn(items[k], k); } })); }
 async function findPics(t){
-  const run = ++finderRun, card = $("finder-card"), grid = $("finder-grid");
-  card.hidden = false; $("finder-title").textContent = "Find pictures: " + t; grid.innerHTML = ""; $("finder-add").hidden = true; finderHits = [];
+  const run = ++finderRun, card = $("finder-card"), grid = $("finder-grid"), msg = $("finder-msg");
+  finderTopic = t; card.hidden = false; $("finder-title").textContent = "Find pictures: " + t; grid.innerHTML = ""; $("finder-add").hidden = true; finderRows = [];
   card.scrollIntoView({behavior:"smooth", block:"start"});
-  const ws = allWords().filter(w => w.topic === t && !pics[key(w)] && !PIC[w.word]);
-  if (!ws.length) return $("finder-msg").textContent = "Every word in " + t + " already has a picture.";
-  if (!navigator.onLine) return $("finder-msg").textContent = "You need to be online to search for pictures.";
-  let found;
-  try { found = await wikiThumbs(ws.map(w => w.word)); } catch(e){ if (run === finderRun) $("finder-msg").textContent = "Could not reach Wikipedia just now. Check your connection and try again."; return; }
-  if (run !== finderRun) return;
-  finderHits = ws.filter(w => found[w.word]).map(w => ({w, url:found[w.word]}));
-  if (!finderHits.length) return $("finder-msg").textContent = "Wikipedia had no pictures for the " + ws.length + " words without one in " + t + ".";
-  $("finder-msg").textContent = "Found pictures for " + finderHits.length + " of the " + ws.length + " words without one. Untick any that are wrong or unhelpful, then add the rest.";
-  grid.innerHTML = finderHits.map((h, i) => `<label class="fitem"><img src="${esc(h.url)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span><input type="checkbox" id="fp-${i}" checked> ${esc(h.w.word)}</span></label>`).join("");
+  const ws = allWords().filter(w => w.topic === t && !pics[key(w)] && !PIC[w.word]), srcs = chosenSrc();
+  if (!ws.length) return msg.textContent = "Every word in " + t + " already has a picture.";
+  if (!srcs.length) return msg.textContent = "Tick at least one source to search.";
+  if (!navigator.onLine) return msg.textContent = "You need to be online to search for pictures.";
+  const found = {}, failed = new Set(); for (const w of ws) found[w.word] = [];
+  const add = (w, urls, sid) => { for (const u of urls || []) if (!found[w].some(x => x.url === u)) found[w].push({url:u, src:SRC[sid].name}); };
+  let done = 0; const total = srcs.reduce((n, sid) => n + (SRC[sid].batch ? 1 : ws.length), 0);
+  const tick = () => { if (run === finderRun) msg.textContent = "Searching " + srcs.map(x => SRC[x].name).join(", ") + "… " + Math.round(100*done/total) + "%"; };
+  tick();
+  for (const sid of srcs){
+    const S_ = SRC[sid];
+    if (S_.batch){ try { const r = await S_.find(ws.map(w => w.word)); for (const w in r) add(w, r[w], sid); } catch(e){ failed.add(S_.name); } done++; tick(); }
+    else await runPool(ws, 4, async w => { if (run !== finderRun) return; try { add(w.word, await S_.one(w.word), sid); } catch(e){ failed.add(S_.name); } done++; tick(); });
+    if (run !== finderRun) return;
+  }
+  finderRows = ws.filter(w => found[w.word].length).map(w => ({w, opts:found[w.word].slice(0, 6)}));
+  const fail = failed.size ? " Could not reach " + [...failed].join(" or ") + " for some or all words." : "";
+  if (!finderRows.length) return msg.textContent = "No pictures found for the " + ws.length + " words without one in " + t + "." + fail;
+  msg.textContent = "Found pictures for " + finderRows.length + " of the " + ws.length + " words without one. For each word, tap the picture you want, or None. The first one is chosen for you." + fail;
+  grid.innerHTML = finderRows.map((r, i) => `<div class="frow"><div class="fw">${esc(r.w.word)}</div><div class="fopts">${r.opts.map((o, j) => `<label class="fopt"><input type="radio" name="fr-${i}" value="${j}" ${j === 0 ? "checked" : ""}><img src="${esc(o.url)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span>${esc(o.src)}</span></label>`).join("")}<label class="fopt none"><input type="radio" name="fr-${i}" value="-1"><span class="nonebox">None</span></label></div></div>`).join("");
   $("finder-add").hidden = false;
 }
 async function urlToData(url){
@@ -2267,16 +2313,18 @@ async function urlToData(url){
   return shrinkSrc(data);
 }
 $("finder-add").onclick = async () => {
-  const btn = $("finder-add"), chosen = finderHits.filter((h, i) => $("fp-" + i) && $("fp-" + i).checked); btn.disabled = true;
+  const btn = $("finder-add"); btn.disabled = true;
+  const chosen = finderRows.map((r, i) => { const c = document.querySelector(`input[name="fr-${i}"]:checked`); const j = c ? +c.value : -1; return j >= 0 ? {w:r.w, url:r.opts[j].url} : null; }).filter(Boolean);
   let ok = 0, bad = 0;
   for (const h of chosen){
     $("finder-msg").textContent = "Saving pictures… " + (ok + bad + 1) + " of " + chosen.length + ".";
     try { savePic(key(h.w), await urlToData(h.url)); ok++; } catch(e){ bad++; }
   }
-  btn.disabled = false; btn.hidden = true; $("finder-grid").innerHTML = ""; finderHits = [];
-  $("finder-msg").textContent = "Added " + ok + (ok === 1 ? " picture." : " pictures.") + (bad ? " " + bad + " could not be downloaded." : "") + " You can change or remove any of them by opening the word.";
+  btn.disabled = false; btn.hidden = true; $("finder-grid").innerHTML = ""; finderRows = [];
+  $("finder-msg").textContent = "Added " + ok + (ok === 1 ? " picture." : " pictures.") + (bad ? " " + bad + " could not be downloaded; try another source for those." : "") + " Change or remove any of them by opening the word.";
   renderList(); if (mode !== "grading") renderPractice(true);
 };
+$("finder-go").onclick = () => finderTopic && findPics(finderTopic);
 $("finder-close").onclick = () => { finderRun++; $("finder-card").hidden = true; };
 
 /* Backup file: progress, own words and pictures */
