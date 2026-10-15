@@ -132,6 +132,10 @@ summary .w.ar{font-size:1.6rem;line-height:1.6;font-weight:700}
 .deckbody .cathead{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:8px}
 .deckbody{display:flex;flex-direction:column;gap:10px;margin-top:8px}
 .deckintro{max-width:60ch}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.fitem{display:flex;flex-direction:column;gap:6px;margin:0;font-weight:600;font-size:.9rem;min-width:0}
+.fitem img{width:100%;aspect-ratio:4/3;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:10px}
+.fitem span{overflow-wrap:anywhere}
 .steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;max-width:62ch}
 .steps a{color:var(--accent)}
 details.story{background:var(--bg)}
@@ -171,7 +175,7 @@ details.cat .catlist{margin-top:6px}
   .wrap{padding-inline:28px;gap:24px}
   .card{padding:32px}
   #view-words,#view-grade{display:grid;grid-template-columns:1fr 1fr;align-items:start}
-  #view-words #search,#view-words #list,#view-grade #coach-card{grid-column:1/-1}
+  #view-words #search,#view-words #list,#view-words #finder-card,#view-grade #coach-card{grid-column:1/-1}
   .catlist{grid-template-columns:1fr 1fr;align-items:start}
 }
 @media (prefers-reduced-motion:no-preference){.bar i{transition:width .4s}}
@@ -225,6 +229,12 @@ details.cat .catlist{margin-top:6px}
       <div class="row"><button class="btn primary" id="passage-btn">Find the harder words</button></div>
       <p class="err" id="passage-err" hidden></p>
       <div id="found" class="found" hidden></div>
+    </div>
+    <div class="card" id="finder-card" hidden>
+      <h2 id="finder-title">Find pictures</h2>
+      <p class="note" id="finder-msg" role="status"></p>
+      <div class="fgrid" id="finder-grid"></div>
+      <div class="row"><button class="btn primary" id="finder-add" hidden>Add ticked pictures</button><button class="btn" id="finder-close">Close</button></div>
     </div>
     <input type="search" id="search" placeholder="Search words or topics" aria-label="Search words or topics">
     <input type="file" id="pic-file" accept="image/*" hidden>
@@ -2057,7 +2067,7 @@ function renderList(){
     const dk = !!by[t][0].deck, g = by[t].filter(w => !q || w.word.toLowerCase().includes(q) || t.toLowerCase().includes(q) || (dk && w.def.toLowerCase().includes(q))); if (!g.length) return "";
     const isOpen = !!q || openCats.has(t), kn = by[t].filter(w => status(w) === "known").length, cap = dk ? (q ? 40 : QBAND) : ROWCAP;
     if (!dk) g.sort((a,b) => a.word.localeCompare(b.word));
-    return `<details class="cat" data-t="${esc(t)}" ${isOpen ? 'open data-filled="1"' : ""}><summary class="cathead"><h2>${esc(t)}</h2><span class="note">${fmt(by[t].length)} words, ${fmt(kn)} known</span><button class="btn small" data-cat="${esc(t)}">Practise this category</button></summary>${isOpen ? `<div class="catlist">${g.slice(0, cap).map(row).join("")}</div>${g.length > cap ? `<p class="note">Showing the first ${cap} of ${fmt(g.length)} matches. Type more letters to narrow it down.</p>` : ""}` : ""}</details>`;
+    return `<details class="cat" data-t="${esc(t)}" ${isOpen ? 'open data-filled="1"' : ""}><summary class="cathead"><h2>${esc(t)}</h2><span class="note">${fmt(by[t].length)} words, ${fmt(kn)} known</span><button class="btn small" data-cat="${esc(t)}">Practise this category</button>${syncOK() && !dk ? `<button class="btn small" data-find="${esc(t)}">Find pictures</button>` : ""}</summary>${isOpen ? `<div class="catlist">${g.slice(0, cap).map(row).join("")}</div>${g.length > cap ? `<p class="note">Showing the first ${cap} of ${fmt(g.length)} matches. Type more letters to narrow it down.</p>` : ""}` : ""}</details>`;
   };
   const ts = Object.keys(by);
   let html = ts.filter(t => !by[t][0].deck).map(cat).join("");
@@ -2090,6 +2100,7 @@ $("list").addEventListener("toggle", e => {
 $("list").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.speak) return speak(b.dataset.speak);
+  if (b.dataset.find){ e.preventDefault(); findPics(b.dataset.find); return; }
   if (b.dataset.cat){ e.preventDefault(); show("practice"); setTopic(b.dataset.cat); return; }
   if (b.dataset.grp){ openGrp[b.dataset.deck] = openGrp[b.dataset.deck] === b.dataset.grp ? null : b.dataset.grp; renderList(); return; }
   if (b.dataset.paste){ const k = b.dataset.paste.toLowerCase(); pasteFor = pasteFor === k ? null : k; pasteErr = ""; renderList(); const bx = document.querySelector("[data-pastebox]"); if (bx) bx.focus(); return; }
@@ -2216,6 +2227,57 @@ $("sync-now").onclick = () => syncRun(false);
 $("sync-disc").onclick = () => { sync = null; try { localStorage.removeItem(SYNC_KEY); } catch(e){} syncView(); syncMsg("This device is no longer syncing. Your progress here is kept, and the copy on GitHub stays as it is."); };
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && sync){ clearTimeout(syncTimer); syncRun(true); } });
 addEventListener("online", () => sync && syncRun(true));
+
+/* Picture finder: looks up each word's main picture on Wikipedia (GitHub version only) */
+let finderRun = 0, finderHits = [];
+async function wikiThumbs(words){
+  const out = {};
+  for (let i = 0; i < words.length; i += 20){
+    const batch = words.slice(i, i + 20);
+    const u = "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&piprop=thumbnail&pithumbsize=480&redirects=1&titles=" + encodeURIComponent(batch.join("|"));
+    const d = await (await fetch(u)).json(), q = d.query || {}, map = {};
+    for (const w of batch) map[w] = w;
+    const follow = list => { for (const x of list || []) for (const w in map) if (map[w] === x.from) map[w] = x.to; };
+    follow(q.normalized); follow(q.redirects);
+    const byTitle = {}; for (const id in q.pages || {}){ const pg = q.pages[id]; if (pg.thumbnail && pg.thumbnail.source) byTitle[pg.title] = pg.thumbnail.source; }
+    for (const w of batch) if (byTitle[map[w]]) out[w] = byTitle[map[w]];
+    $("finder-msg").textContent = "Searching Wikipedia… " + Math.min(i + 20, words.length) + " of " + words.length + " words checked.";
+  }
+  return out;
+}
+async function findPics(t){
+  const run = ++finderRun, card = $("finder-card"), grid = $("finder-grid");
+  card.hidden = false; $("finder-title").textContent = "Find pictures: " + t; grid.innerHTML = ""; $("finder-add").hidden = true; finderHits = [];
+  card.scrollIntoView({behavior:"smooth", block:"start"});
+  const ws = allWords().filter(w => w.topic === t && !pics[key(w)] && !PIC[w.word]);
+  if (!ws.length) return $("finder-msg").textContent = "Every word in " + t + " already has a picture.";
+  if (!navigator.onLine) return $("finder-msg").textContent = "You need to be online to search for pictures.";
+  let found;
+  try { found = await wikiThumbs(ws.map(w => w.word)); } catch(e){ if (run === finderRun) $("finder-msg").textContent = "Could not reach Wikipedia just now. Check your connection and try again."; return; }
+  if (run !== finderRun) return;
+  finderHits = ws.filter(w => found[w.word]).map(w => ({w, url:found[w.word]}));
+  if (!finderHits.length) return $("finder-msg").textContent = "Wikipedia had no pictures for the " + ws.length + " words without one in " + t + ".";
+  $("finder-msg").textContent = "Found pictures for " + finderHits.length + " of the " + ws.length + " words without one. Untick any that are wrong or unhelpful, then add the rest.";
+  grid.innerHTML = finderHits.map((h, i) => `<label class="fitem"><img src="${esc(h.url)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span><input type="checkbox" id="fp-${i}" checked> ${esc(h.w.word)}</span></label>`).join("");
+  $("finder-add").hidden = false;
+}
+async function urlToData(url){
+  const blob = await (await fetch(url, {mode:"cors", referrerPolicy:"no-referrer"})).blob();
+  const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+  return shrinkSrc(data);
+}
+$("finder-add").onclick = async () => {
+  const btn = $("finder-add"), chosen = finderHits.filter((h, i) => $("fp-" + i) && $("fp-" + i).checked); btn.disabled = true;
+  let ok = 0, bad = 0;
+  for (const h of chosen){
+    $("finder-msg").textContent = "Saving pictures… " + (ok + bad + 1) + " of " + chosen.length + ".";
+    try { savePic(key(h.w), await urlToData(h.url)); ok++; } catch(e){ bad++; }
+  }
+  btn.disabled = false; btn.hidden = true; $("finder-grid").innerHTML = ""; finderHits = [];
+  $("finder-msg").textContent = "Added " + ok + (ok === 1 ? " picture." : " pictures.") + (bad ? " " + bad + " could not be downloaded." : "") + " You can change or remove any of them by opening the word.";
+  renderList(); if (mode !== "grading") renderPractice(true);
+};
+$("finder-close").onclick = () => { finderRun++; $("finder-card").hidden = true; };
 
 /* Backup file: progress, own words and pictures */
 function bkMsg(t, bad){ const m = $("bk-msg"); m.textContent = t; m.className = bad ? "err" : "note"; m.hidden = false; }
