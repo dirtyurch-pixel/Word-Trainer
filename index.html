@@ -364,6 +364,22 @@ details.cat .catlist{margin-top:6px}
       <input type="file" id="bk-file" accept=".json,application/json" hidden>
       <p class="note" id="bk-msg" role="status" hidden></p>
     </div>
+    <div class="card" id="ai-card" hidden>
+      <h2>Automatic marking</h2>
+      <p class="note">Let Claude mark your typed answers, like the Claude version does. It uses your own Anthropic API key, kept only on this device. Each answer costs a tiny fraction of a penny.</p>
+      <div id="ai-off">
+        <ol class="steps">
+          <li>Go to <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> and sign up or sign in. This is separate from your Claude app account.</li>
+          <li>Under <b>Billing</b>, add a small amount of credit, and set a monthly spending limit if you like.</li>
+          <li>Under <b>API keys</b>, tap <b>Create key</b>, name it "Word Trainer" and copy it. It starts with <code>sk-ant-</code>.</li>
+          <li>Paste it below and tap Save and test. Do the same on each device.</li>
+        </ol>
+        <div><label for="ai-key">Anthropic API key</label><input type="password" id="ai-key" autocomplete="off" spellcheck="false" placeholder="sk-ant-..."></div>
+        <div class="row"><button class="btn primary" id="ai-save">Save and test</button></div>
+      </div>
+      <div id="ai-on" hidden><div class="row"><button class="btn" id="ai-test">Test it</button><button class="btn" id="ai-remove">Remove key from this device</button></div></div>
+      <p class="note" id="ai-msg" role="status"></p>
+    </div>
     <div class="card" id="sync-card" hidden>
       <h2>Sync between your devices</h2>
       <div id="sync-off">
@@ -2023,7 +2039,7 @@ function renderPractice(keep){
       h += `</div>`;
     }
     h += `<p class="note">${(st.streak[key(cur)]|0) >= NEED ? "This word is done for this set: right twice in a row." : result.verdict === "correct" ? "Right once. Get it right once more in a row and this word is done." : "This word stays in the set until you get it right twice in a row without a hint."}</p>
-      <div class="row"><button class="btn primary" data-act="next">Next word</button></div>`;
+      <div class="row"><button class="btn primary" data-act="next">Next word</button>${result.auto && undoSnap ? (result.verdict === "correct" ? `<button class="btn" data-act="overrule" data-v="incorrect">Actually I was wrong</button>` : `<button class="btn" data-act="overrule" data-v="correct">I think I was right</button>`) : ""}</div>`;
   }
   c.innerHTML = h;
   if ($("answer")){
@@ -2045,6 +2061,7 @@ $("practice-card").addEventListener("click", e => {
   else if (a === "sentence") checkSentence();
   else if (a === "next") nextWord(false);
   else if (a === "anyway") nextWord(true);
+  else if (a === "overrule") overrule(b.dataset.v);
   else if (a === "reveal"){ mode = "self"; result = {answer:"", note:"Here is the word."}; renderPractice(false); speak(cur.word); }
   else if (a === "newset"){ S.set = null; nextWord(false); }
 });
@@ -2062,7 +2079,8 @@ function nextWord(force, quiet){
   renderPractice(quiet ? null : false);
 }
 
-function finish(verdict, answer, feedback){
+function finish(verdict, answer, feedback, auto){
+  undoSnap = auto ? {progress:JSON.parse(JSON.stringify(S.progress)), days:{...S.days}, set:S.set ? JSON.parse(JSON.stringify(S.set)) : null} : null;
   if (hints && verdict === "correct"){ verdict = "partial"; feedback = (feedback ? feedback + " " : "") + "Marked partly right because you used a hint."; }
   const k = key(cur), now = Date.now(), p = S.progress[k] || {level:0, seen:0, c:0, p:0, i:0, s:0};
   if (verdict === "correct"){ p.level = Math.min(4, p.level + 1); p.due = now + INTERVAL[p.level]*DAY; }
@@ -2077,7 +2095,7 @@ function finish(verdict, answer, feedback){
   if (verdict === "incorrect") p.m = 0;
   const topicW = allWords().filter(w => w.topic === cur.topic), knownBefore = topicW.filter(w => status(w) === "known").length, dayBefore = S.days[dayKey()]|0;
   S.progress[k] = p; S.days[dayKey()] = dayBefore + 1; save();
-  mode = "result"; result = {verdict, answer, feedback}; sent = {state:"idle"};
+  mode = "result"; result = {verdict, answer, feedback, auto:!!auto}; sent = {state:"idle"};
   renderPractice(false); renderMeter(); renderList(); renderGrade();
   const pc = $("practice-card"); pc.classList.remove("fx-good", "fx-bad"); void pc.offsetWidth; pc.classList.add(verdict === "incorrect" ? "fx-bad" : "fx-good");
   sfx(verdict);
@@ -2098,22 +2116,8 @@ function lev(a, b){
   return m[a.length][b.length];
 }
 
-async function check(){
-  if (mode !== "ask") return;
-  const answer = $("answer").value.trim();
-  if (!answer){ const e = $("ask-err"); e.textContent = isRev() ? "Type the word first, or choose I don't know." : "Type your meaning first, or choose I don't know."; e.hidden = false; return; }
-  if (cur.q){ const a = plain(answer); if (a && [cur.def].concat(cur.q.tr.map(t => t[0])).some(t => plain(t) === a)) return finish("correct", answer, "That matches how this word is translated in the Qur'an."); }
-  if (cur.d){ const a = plain(answer); if (a && dAlt(cur.def).includes(a)) return finish("correct", answer, "That matches the meaning."); }
-  if (isRev()){
-    const a = norm(answer), t = norm(cur.word);
-    if (a === t) return finish("correct", answer, "That is the word.");
-    if (lev(a, t) <= Math.max(1, Math.floor(t.length/5))) return finish("partial", answer, `Very close. It is spelled "${cur.word}".`);
-    return finish("incorrect", answer, `The word is "${cur.word}".`);
-  }
-  if (!sample){ mode = "self"; result = {answer, note:"Automatic checking is not available here."}; renderPractice(false); return; }
-  mode = "grading"; renderPractice(true);
-  ctl = new AbortController();
-  const prompt = `You are marking a vocabulary quiz. The learner was shown a word and typed what they think it means.
+function markPrompt(answer){
+  return `You are marking a vocabulary quiz. The learner was shown a word and typed what they think it means.
 
 Word: ${JSON.stringify(cur.word)} (${cur.pos})
 Accepted meaning: ${JSON.stringify(cur.def)}${cur.q ? "\nThis is a word form from Qur'anic Arabic. Translations used for it in the Qur'an: " + JSON.stringify(cur.q.tr.map(t => t[0]).slice(0, 15)) + ". Accept any of these or a close match. If the learner has the core word right but leaves out an attached part such as 'and', 'the', 'by' or 'your', mark it correct and mention the missing part in the feedback." : ""}${cur.d ? "\nThis is a word or phrase in Moroccan Arabic (Darija). The card may show two forms separated by a slash, such as singular / plural or past / present. Brackets, commas and semicolons in the accepted meaning separate alternative senses or notes; giving any one of the senses is enough to be correct." : ""}
@@ -2126,6 +2130,96 @@ Judge whether the learner understands the word. Accept any wording, synonyms, in
 - "incorrect": wrong meaning, a different word, or no real attempt.
 
 Reply with only JSON: {"verdict":"correct"|"partial"|"incorrect","feedback":"one or two short sentences in very simple everyday words, as if explaining to a young child, spoken to the learner as 'you', saying what they got right and what is missing or wrong"}`;
+}
+/* Offline check: does the answer use the key words of the meaning? Only ever marks right, never wrong. */
+const STOP = new Set("a an the of to in on for and or but with by as at is are be been being it its this that these those from into than then so very not no any some something someone thing things when where who what which how you your they them their he she his her we our i me my do does did done have has had can could would should will shall may might must just also only more most less much many such like about over under up down out off very really kind sort way used use make makes made".split(" "));
+const stem = t => t.replace(/(ies)$/, "y").replace(/(ing|edly|ed|ly|es|s)$/, "").replace(/e$/, "");
+const toks = t => String(t).toLowerCase().replace(/\([^)]*\)/g, " ").split(/[^a-z]+/).filter(x => x.length > 2 && !STOP.has(x)).map(stem).filter(x => x.length > 2);
+function localMark(answer, w){
+  const a = [...new Set(toks(answer))]; if (!a.length) return null;
+  const def = [...new Set(toks(w.def))], all = new Set(def.concat(toks(w.kid || "")));
+  const hit = a.filter(x => all.has(x)).length, cover = def.filter(x => a.includes(x)).length;
+  if (hit/a.length >= .6 && cover >= Math.min(2, Math.ceil(def.length/3))) return {verdict:"correct", feedback:"Your answer uses the key words of the meaning."};
+  return null;
+}
+/* Online check with the learner's own Anthropic API key (GitHub version) */
+const AI_KEY = "wt-ai-key";
+let aiKey = ""; try { aiKey = localStorage.getItem(AI_KEY) || ""; } catch(e){}
+async function askClaudeKey(prompt, signal){
+  const r = await fetch("https://api.anthropic.com/v1/messages", {method:"POST", signal, headers:{"content-type":"application/json", "x-api-key":aiKey, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:"claude-haiku-5-5", max_tokens:300, messages:[{role:"user", content:prompt}]})});
+  if (r.status === 401 || r.status === 403) throw {code:"badkey"};
+  if (r.status === 429) throw {code:"rate_limited"};
+  if (r.status === 400){ const d = await r.json().catch(() => ({})); throw {code: /credit|billing|balance/i.test(JSON.stringify(d)) ? "nocredit" : "upstream_error"}; }
+  if (!r.ok) throw {code:"upstream_error"};
+  const d = await r.json(), text = (d.content || []).map(c => c.text || "").join("");
+  const m = text.match(/\{[\s\S]*\}/); if (!m) throw {code:"invalid_json"};
+  return JSON.parse(m[0]);
+}
+const KEY_ERR = {badkey:"Your Anthropic key was not accepted. Check it in My grade.", nocredit:"Your Anthropic account has run out of credit. Top it up to keep automatic marking.", rate_limited:"Too many answers checked in a short time. Wait a moment."};
+async function markWithKey(answer){
+  mode = "grading"; renderPractice(true); ctl = new AbortController();
+  try {
+    const r = await askClaudeKey(markPrompt(answer), ctl.signal), verdict = r && VERDICT[r.verdict] ? r.verdict : null;
+    if (!verdict) throw {code:"invalid_json"};
+    finish(verdict, answer, typeof r.feedback === "string" ? r.feedback.slice(0, 500) : "");
+  } catch(e){
+    if (e && e.name === "AbortError"){ mode = "ask"; renderPractice(true); return; }
+    mode = "self"; result = {answer, note: KEY_ERR[e && e.code] || "Automatic checking failed this time."}; renderPractice(false);
+  }
+}
+/* Free online check: compare the answer with the meaning and with words that mean the same thing (from Datamuse, a free word-finding service) */
+const relCache = {};
+async function related(w){
+  if (relCache[w.word]) return relCache[w.word];
+  const get = async q => { try { const r = await withTimeout(fetch("https://api.datamuse.com/words?max=100&ml=" + encodeURIComponent(q)), 7000); return r.ok ? (await r.json()).map(x => x.word) : []; } catch(e){ return []; } };
+  const lists = await Promise.all([get(w.word), get(String(w.kid || w.def).slice(0, 90))]);
+  const set = new Set(); for (const l of lists) for (const x of l) for (const t of toks(x)) set.add(t);
+  return relCache[w.word] = set;
+}
+async function markWithMeaning(answer){
+  mode = "grading"; renderPractice(true);
+  const w = cur, a = [...new Set(toks(answer))], mean = new Set(toks(w.def).concat(toks(w.kid || "")));
+  let rel; try { rel = await related(w); } catch(e){ rel = new Set(); }
+  if (cur !== w) return;
+  if (!a.length){ mode = "self"; result = {answer, note:"Your answer was too short to check. Compare it with the meaning."}; return renderPractice(false); }
+  const direct = a.filter(t => mean.has(t)), close = a.filter(t => !mean.has(t) && rel.has(t)), score = (direct.length + close.length*.8)/a.length;
+  const good = new Set(direct.concat(close)), orig = String(answer).toLowerCase().split(/[^a-z]+/).filter(x => x.length > 2 && !STOP.has(x) && good.has(stem(x)));
+  const words = [...new Set(orig)].slice(0, 4).map(t => '"' + t + '"').join(", ");
+  if (!rel.size && !direct.length){ mode = "self"; result = {answer, note:"Couldn't reach the word service to check this one. Compare it with the meaning."}; return renderPractice(false); }
+  if (score >= .5) return finish("correct", answer, "Your answer matches the meaning" + (words ? ": " + words + " fit" + (direct.length + close.length === 1 ? "s" : "") + " what the word means." : "."), true);
+  if (score >= .25) return finish("partial", answer, "Partly there. " + (words ? words + " fit" + (direct.length + close.length === 1 ? "s" : "") + " the meaning, but" : "Some of it fits, but") + " the rest of your answer doesn't match. Read the meaning below.", true);
+  if (a.length >= 2 || !close.length) return finish("incorrect", answer, "Your answer doesn't share the key ideas of the meaning. Read it below.", true);
+  mode = "self"; result = {answer, note:"Couldn't tell from your answer. Compare it with the meaning."}; renderPractice(false);
+}
+/* Let the learner overrule an automatic mark */
+let undoSnap = null;
+function overrule(v){
+  if (!undoSnap || !cur) return;
+  const k = key(cur); S.progress = undoSnap.progress; S.days = undoSnap.days; S.set = undoSnap.set;
+  undoSnap = null; finish(v, result.answer, v === "correct" ? "Marked right by you." : "Marked wrong by you.");
+}
+async function check(){
+  if (mode !== "ask") return;
+  const answer = $("answer").value.trim();
+  if (!answer){ const e = $("ask-err"); e.textContent = isRev() ? "Type the word first, or choose I don't know." : "Type your meaning first, or choose I don't know."; e.hidden = false; return; }
+  if (cur.q){ const a = plain(answer); if (a && [cur.def].concat(cur.q.tr.map(t => t[0])).some(t => plain(t) === a)) return finish("correct", answer, "That matches how this word is translated in the Qur'an."); }
+  if (cur.d){ const a = plain(answer); if (a && dAlt(cur.def).includes(a)) return finish("correct", answer, "That matches the meaning."); }
+  if (isRev()){
+    const a = norm(answer), t = norm(cur.word);
+    if (a === t) return finish("correct", answer, "That is the word.");
+    if (lev(a, t) <= Math.max(1, Math.floor(t.length/5))) return finish("partial", answer, `Very close. It is spelled "${cur.word}".`);
+    return finish("incorrect", answer, `The word is "${cur.word}".`);
+  }
+  const local = localMark(answer, cur);
+  if (local && !sample) return finish(local.verdict, answer, local.feedback, true);
+  if (!sample){
+    if (navigator.onLine) return markWithMeaning(answer);
+    mode = "self"; result = {answer, note:"You're offline, so only exact key-word matches can be checked."}; renderPractice(false); return;
+  }
+  mode = "grading"; renderPractice(true);
+  ctl = new AbortController();
+  const prompt = markPrompt(answer);
   try {
     const r = await sample.json(prompt, {modelTier:"quick", signal:ctl.signal});
     const verdict = r && VERDICT[r.verdict] ? r.verdict : null;
@@ -2282,6 +2376,24 @@ let sync = null, syncTimer = null, syncing = false, lastUp = "";
 try { sync = JSON.parse(localStorage.getItem(SYNC_KEY) || "null"); } catch(e){}
 const syncOK = () => !window.claude;
 function syncMsg(t, bad){ const m = $("sync-msg"); m.textContent = t; m.className = bad ? "err" : "note"; }
+function aiView(){
+  $("ai-card").hidden = true; $("ai-off").hidden = !!aiKey; $("ai-on").hidden = !aiKey;
+  if (aiKey && !$("ai-msg").textContent) $("ai-msg").textContent = "Automatic marking is on. Answers are checked by Claude when you're online.";
+}
+async function aiTest(){
+  const m = $("ai-msg"); m.className = "note"; m.textContent = "Testing…";
+  try { const r = await askClaudeKey('Reply with only this JSON: {"verdict":"correct","feedback":"ok"}'); if (!r || !r.verdict) throw {code:"invalid_json"}; m.textContent = "It works. Your typed answers will now be marked automatically when you're online."; return true; }
+  catch(e){ m.className = "err"; m.textContent = KEY_ERR[e && e.code] || "The test failed. Check your connection and the key, then try again."; return false; }
+}
+$("ai-save").onclick = async () => {
+  const k = $("ai-key").value.trim();
+  if (!/^sk-ant-[A-Za-z0-9_\-]{20,}$/.test(k)){ $("ai-msg").className = "err"; $("ai-msg").textContent = "That doesn't look like an Anthropic API key. It should start with sk-ant-."; return; }
+  aiKey = k; $("ai-key").value = "";
+  if (await aiTest()){ try { localStorage.setItem(AI_KEY, k); } catch(e){} } else aiKey = "";
+  aiView();
+};
+$("ai-test").onclick = aiTest;
+$("ai-remove").onclick = () => { aiKey = ""; try { localStorage.removeItem(AI_KEY); } catch(e){} $("ai-msg").className = "note"; $("ai-msg").textContent = "Key removed from this device."; aiView(); };
 function syncView(){
   $("sync-card").hidden = !syncOK();
   $("sync-off").hidden = !!sync; $("sync-on").hidden = !sync;
@@ -2931,7 +3043,7 @@ if (OFFLINE){
 try { const raw = localStorage.getItem(LS); if (raw){ const ls = clean(JSON.parse(raw)); S = OFFLINE ? mergeState(S, ls) : ls; } } catch(e){}
 try { for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (k && k.startsWith(PLS)){ const v = localStorage.getItem(k); if (v && v.startsWith("data:image/")) pics[k.slice(PLS.length)] = v; } } } catch(e){}
 renderControls();
-nextWord(false, true); renderMeter(); renderList(); renderGrade(); syncClaude(); loadPics().then(() => { syncView(); if (sync) syncRun(true); });
+nextWord(false, true); renderMeter(); renderList(); renderGrade(); syncClaude(); loadPics().then(() => { syncView(); aiView(); if (sync) syncRun(true); });
 syncSndBtn();
 show(["#practice", "#words", "#grade", "#cards"].includes(location.hash) ? location.hash.slice(1) : "home");
 

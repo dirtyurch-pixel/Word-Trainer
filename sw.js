@@ -1,5 +1,5 @@
 /* Keeps the app and its recordings and pictures on the device so it works offline. */
-const CACHE = "word-trainer-v10";
+const CACHE = "word-trainer-v12";
 const CORE = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 const MEDIA = [];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
