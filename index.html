@@ -370,6 +370,9 @@ body.splash-on .wrap{visibility:hidden}
 .cside,.cpic,.cbar{display:none}
 .kh{display:inline-block;font-family:system-ui,"Segoe UI",sans-serif;font-size:.72rem;border:1px solid currentColor;border-radius:4px;padding:0 5px;margin:0 2px;opacity:.75;font-weight:400}
 .fc-title{margin-right:auto}
+.fc-newday{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:.85rem;color:var(--muted)}
+.fc-newday[hidden]{display:none}
+.fc-newday select{width:auto!important;min-width:0!important;flex:none;padding:6px 8px}
 .ctools{gap:10px}
 .fc-score{position:relative;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 22px;font-family:var(--mono);font-size:.9rem;color:var(--muted)}
 .fc-score b{font-family:var(--display);font-size:1.15rem;color:var(--ink)}
@@ -450,7 +453,7 @@ body.splash-on .wrap{visibility:hidden}
   #practice-card.split textarea#answer{min-height:200px}
   /* Flashcards: missed list, big card, known list */
   .ctools{gap:14px}
-  .ctools select{min-width:320px}
+  .ctools #cards-sel{min-width:320px}
   .charpop{width:220px;right:-90px;top:-50px}
   .cwrap{display:grid;grid-template-columns:minmax(200px,1fr) minmax(0,2.4fr) minmax(200px,1fr);gap:32px;align-items:start}
   .cside{display:block;background:var(--surface);border:1px solid var(--line);padding:18px;min-height:420px;max-height:70vh;overflow:auto}
@@ -542,7 +545,7 @@ body.splash-on .wrap{visibility:hidden}
   </section>
 
   <section id="view-cards" hidden>
-    <div class="tools ctools"><h2 class="ptitle fc-title">Flashcards</h2><div class="tabs" id="fc-modes" role="group" aria-label="Flashcard mode"><button data-m="study" class="on">Study</button><button data-m="test">Test</button></div><select id="cards-sel" aria-label="Category for flashcards"></select><button class="btn small" id="cards-restart">Shuffle and restart</button></div>
+    <div class="tools ctools"><h2 class="ptitle fc-title">Flashcards</h2><div class="tabs" id="fc-modes" role="group" aria-label="Flashcard mode"><button data-m="study" class="on">Study</button><button data-m="test">Test</button></div><select id="cards-sel" aria-label="Category for flashcards"></select><label class="fc-newday" id="fc-newday-wrap">New a day <select id="fc-newday" aria-label="New cards per day"><option>5</option><option>10</option><option>15</option><option>20</option><option>30</option></select></label><button class="btn small" id="cards-restart">Shuffle and restart</button></div>
     <div class="fc-score" id="fc-score"></div>
     <div id="cards-area"></div>
   </section>
@@ -2137,6 +2140,7 @@ function clean(d){
     if (F.nd && typeof F.nd === "object") for (const k of Object.keys(F.nd).filter(k => /^\d{4}-\d\d-\d\d$/.test(k)).sort().slice(-7)) if (F.nd[k] && typeof F.nd[k] === "object"){ o.nd[k] = {}; for (const t in F.nd[k]) o.nd[k][String(t).slice(0, 40)] = F.nd[k][t] | 0; }
     if (F.pts && typeof F.pts === "object") for (const k of Object.keys(F.pts).filter(k => /^\d{4}-\d\d-\d\d$/.test(k)).sort().slice(-120)) o.pts[k] = Math.max(0, F.pts[k] | 0);
     o.tot = Math.max(0, F.tot | 0);
+    if ([5, 10, 15, 20, 30].includes(F.newDay)) o.newDay = F.newDay;
     if (F.tests && typeof F.tests === "object") for (const t in F.tests){ const x = F.tests[t]; if (x && typeof x === "object") o.tests[String(t).slice(0, 40)] = {best:Math.max(0, Math.min(100, x.best | 0)), last:Math.max(0, Math.min(100, x.last | 0))}; }
   }
   if (d.games && d.games.mc && typeof d.games.mc === "object") for (const t in d.games.mc){ const g = d.games.mc[t]; if (g && typeof g === "object") out.games.mc[String(t).slice(0,40)] = {best:Math.max(0, Math.min(10, g.best|0)), plays:Math.max(0, g.plays|0)}; }
@@ -3073,6 +3077,7 @@ function fcMerge(a, b){
   for (const d in b.nd || {}){ a.nd[d] = a.nd[d] || {}; for (const t in b.nd[d]) a.nd[d][t] = Math.max(a.nd[d][t] | 0, b.nd[d][t] | 0); }
   for (const d in b.pts || {}) a.pts[d] = Math.max(a.pts[d] | 0, b.pts[d] | 0);
   a.tot = Math.max(a.tot | 0, b.tot | 0);
+  if (!a.newDay && b.newDay) a.newDay = b.newDay;
   for (const t in b.tests || {}){ const x = a.tests[t]; a.tests[t] = x ? {best:Math.max(x.best, b.tests[t].best), last:b.tests[t].last} : b.tests[t]; }
   return a;
 }
@@ -3474,6 +3479,7 @@ function charPop(ok){
   }
 }
 const cards = {mode:"study", topic:"", list:null, cur:null, phase:"ask", verdict:null, fb:"", typed:"", again:[], good:[], combo:0, order:null, test:null, waitT:null};
+const fcNewDay = () => { const n = (S.fc || {}).newDay; return [5, 10, 15, 20, 30].includes(n) ? n : 5; };
 const fcS = () => { S.fc = S.fc || {c:{}, nd:{}, pts:{}, tot:0, tests:{}}; return S.fc; };
 const FMIN = 6e4, DAYMS = 864e5;
 function fcDue(now, days){ const d = new Date(now); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + days); return d.getTime(); }
@@ -3506,7 +3512,7 @@ function fcQueue(){
   for (const w of ws){ const r = f.c[key(w)]; if (!r) fresh.push(w); else if (r.s === 2){ if (r.due <= now) rev.push(w); } else if (r.due <= now) learn.push(w); else later.push(w); }
   learn.sort((a, b) => f.c[key(a)].due - f.c[key(b)].due); later.sort((a, b) => f.c[key(a)].due - f.c[key(b)].due);
   if (cards.order){ const o = cards.order; fresh.sort((a, b) => (o[key(a)] || 0) - (o[key(b)] || 0)); }
-  const newLeft = Math.max(0, FC.newDay - ((f.nd[today] || {})[t] | 0));
+  const newLeft = Math.max(0, fcNewDay() - ((f.nd[today] || {})[t] | 0));
   return {learn, rev, fresh:fresh.slice(0, newLeft), later, allNew:fresh.length, newLeft, learning:learn.length + later.length};
 }
 function fcPick(){
@@ -3522,6 +3528,7 @@ function cardsOpen(){
   if (!ts.includes(cards.topic)) cards.topic = ts.includes(S.topic) ? S.topic : (S.set && ts.includes(S.set.topic) ? S.set.topic : ts[0]);
   $("cards-sel").innerHTML = ts.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join(""); $("cards-sel").value = cards.topic;
   document.querySelectorAll("#fc-modes button").forEach(b => b.classList.toggle("on", b.dataset.m === cards.mode));
+  $("fc-newday").value = String(fcNewDay());
   if (!cards.list) cardsStart(); else cardsRender();
 }
 function cardsStart(only){
@@ -3535,6 +3542,7 @@ function cardsStart(only){
 }
 $("cards-sel").addEventListener("change", () => { cards.topic = $("cards-sel").value; cards.order = null; cardsStart(); });
 $("cards-restart").onclick = () => cardsStart();
+$("fc-newday").addEventListener("change", () => { fcS().newDay = +$("fc-newday").value; save(); if (cards.mode === "study") cardsRender(); });
 $("fc-modes").addEventListener("click", e => { const b = e.target.closest("[data-m]"); if (!b || b.dataset.m === cards.mode) return; cards.mode = b.dataset.m; document.querySelectorAll("#fc-modes button").forEach(x => x.classList.toggle("on", x === b)); cardsStart(); });
 function fcStrip(){
   const f = fcS();
@@ -3547,7 +3555,7 @@ function fcStrip(){
 }
 function fcSide(cls, title, keys){ return `<aside class="cside ${cls}"><p class="side-h">${title} · ${keys.length}</p>${keys.length ? `<ul>${keys.slice().reverse().map(k => { const x = byKey(k); return x ? `<li>${esc(x.word)}</li>` : ""; }).join("")}</ul>` : `<p class="note">None yet</p>`}</aside>`; }
 function cardsRender(){
-  clearTimeout(cards.waitT); $("fc-score").innerHTML = fcStrip();
+  clearTimeout(cards.waitT); $("fc-newday-wrap").hidden = cards.mode !== "study"; $("fc-score").innerHTML = fcStrip();
   const area = $("cards-area"), f = fcS();
   let w = null;
   if (cards.mode === "test"){ const T = cards.test; if (T.i >= T.keys.length) return fcTestEnd(); w = byKey(T.keys[T.i]); if (!w){ T.i++; return cardsRender(); } }
@@ -3556,7 +3564,7 @@ function cardsRender(){
     if (!w){
       const q = fcQueue(), nxt = q.later[0] ? f.c[key(q.later[0])].due - Date.now() : 0;
       area.innerHTML = `<div class="card cdone"><h2>Congratulations! You have finished ${esc(cards.topic)} for now.</h2>
-        <p>${q.later.length ? `${q.later.length} learning card${q.later.length === 1 ? "" : "s"} will be back in ${fcIvl(nxt).replace("<", "about ")}.` : q.allNew ? `You've learned today's ${FC.newDay} new cards. More new cards tomorrow.` : "Every card here is learned. Reviews come back when they're due."}</p>
+        <p>${q.later.length ? `${q.later.length} learning card${q.later.length === 1 ? "" : "s"} will be back in ${fcIvl(nxt).replace("<", "about ")}.` : q.allNew ? `You've learned today's ${fcNewDay()} new cards. More new cards tomorrow.` : "Every card here is learned. Reviews come back when they're due."}</p>
         <div class="row">${q.allNew ? `<button class="btn" data-c="more">Learn 10 more new cards today</button>` : ""}<button class="btn primary" data-c="totest">Take a test on ${esc(cards.topic)}</button><button class="btn" data-c="home">Choose another subject</button></div></div>`;
       if (q.later.length) cards.waitT = setTimeout(() => { if (!$("view-cards").hidden && cards.mode === "study") cardsRender(); }, Math.min(Math.max(nxt - FC.ahead*FMIN, 5000), 60000));
       return;
