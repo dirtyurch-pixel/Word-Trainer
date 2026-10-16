@@ -2701,6 +2701,9 @@ async function syncRun(quiet){
       for (const k in inc.progress) if (!S.progress[k] || inc.progress[k].seen > S.progress[k].seen) S.progress[k] = inc.progress[k];
       for (const c of inc.custom) if (!S.custom.some(r => r.word.toLowerCase() === c.word.toLowerCase())) S.custom.push(c);
       for (const k in inc.days) S.days[k] = Math.max(S.days[k]|0, inc.days[k]|0);
+      S.badges = S.badges || {}; for (const k in inc.badges) if (!S.badges[k] || inc.badges[k] < S.badges[k]) S.badges[k] = inc.badges[k];
+      S.games = S.games || {mc:{}}; S.games.mc = S.games.mc || {}; for (const t in inc.games.mc){ const x = S.games.mc[t] || {best:0, plays:0}, y = inc.games.mc[t]; S.games.mc[t] = {best:Math.max(x.best, y.best), plays:Math.max(x.plays, y.plays)}; }
+      S.fc = fcMerge(S.fc, inc.fc);
       if (remote.pics) for (const k in remote.pics) if (!pics[k] && typeof remote.pics[k] === "string" && remote.pics[k].startsWith("data:image/")){ pics[k] = remote.pics[k]; idb("readwrite", st => st.put(remote.pics[k], k)).catch(() => {}); changed = true; }
       if (JSON.stringify(S) !== before){ changed = true; try { localStorage.setItem(LS, JSON.stringify(S)); } catch(e){} }
     }
@@ -3752,4 +3755,4 @@ document.body.classList.add("splash-on"); setRain(true); renderBadges(); checkBa
   } catch(e){ $("save-note").hidden = false; }
 })();
 </script>
-<script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script></body></html>
+<script>if ("serviceWorker" in navigator) addEventListener("load", () => { navigator.serviceWorker.register("sw.js", {updateViaCache:"none"}).then(r => r.update()).catch(() => {}); let had = !!navigator.serviceWorker.controller, done = false; navigator.serviceWorker.addEventListener("controllerchange", () => { if (had && !done){ done = true; location.reload(); } had = true; }); });</script></body></html>
