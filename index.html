@@ -364,6 +364,9 @@ body.splash-on .wrap{visibility:hidden}
 @keyframes pop{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
 @keyframes shake{0%,100%{transform:none}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 .ppic{display:none}
+.pcol{display:flex;flex-direction:column;gap:16px;min-width:0}
+.pcat,.psetlist{display:none}
+.side-h{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;color:var(--muted);margin:0 0 4px;text-transform:uppercase}
 /* Wide PC screens: a bigger centre column; the sides stay free */
 @media (min-width:1600px){
   html{font-size:125%}
@@ -384,6 +387,22 @@ body.splash-on .wrap{visibility:hidden}
   #pbox .popt{flex-direction:column;gap:12px;padding:24px;font-size:1.05rem}
   #pbox .popt.word{justify-content:center;font-size:1.3rem}
   #pbox .pq.def{font-size:1.2rem}
+  #practice-card.split{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.2fr);gap:40px;align-items:start;padding:36px;min-height:520px}
+  #practice-card.split .pleft{position:sticky;top:20px}
+  #practice-card.split .pright{border-left:1px solid var(--line);padding-left:40px;min-height:100%}
+  #practice-card.split .pright:empty{display:none}
+  #practice-card .pcat{display:block}
+  #practice-card .pcat img,#practice-card .pcat svg{width:96px;height:96px;border-radius:50%}
+  #practice-card .pcat svg{stroke:var(--accent);fill:none;stroke-width:3}
+  #practice-card.split .head{font-size:clamp(3rem,4vw,4.6rem)}
+  #practice-card .psetlist{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .psetlist div{display:grid;grid-template-columns:2em 1fr auto;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--line);background:var(--bg)}
+  .psetlist div b{font-family:var(--read);font-weight:500}
+  .psetlist div span{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+  .psetlist div.cur{border-color:var(--accent)}
+  .psetlist div.cur b{color:var(--accent)}
+  .psetlist div.done span:last-child{color:var(--good)}
+  #practice-card.split textarea#answer{min-height:200px}
 }
 @media (min-width:2600px){
   html{font-size:145%}
@@ -2165,6 +2184,7 @@ function renderPractice(keep){
   let h = `<div class="setbar"><span class="note">Set of ${st.words.length} in ${esc(st.topic)}</span><span class="pips" role="img" aria-label="Progress through this set">${st.words.map(k => { const n = st.streak[k]|0; return `<i class="${k === key(cur) ? "cur " : ""}${n >= NEED ? "full" : n ? "half" : ""}"></i>`; }).join("")}</span></div>` + (cur.d && ask && !isRev() ? "" : picHTML(cur));
   if (hideWord) h += `<div><div class="pos">${esc(cur.pos)}</div><p class="clue">${esc(cur.def)}</p></div>`;
   else h += `<div><div class="pos">${esc(cur.pos)}${cur.say ? " · " + esc(cur.say) : ""}${cur.q ? " · appears " + fmt(cur.q.occ) + (cur.q.occ === 1 ? " time" : " times") + " in the Qur'an" : ""}</div><p class="head${cur.deck ? " ar" : ""}${cur.d ? " dj" : ""}"${cur.deck ? ' lang="ar" dir="rtl"' : ""}><span>${esc(cur.word)}</span></p></div>${hearBtn(cur) ? `<div class="row">${hearBtn(cur)}</div>` : ""}`;
+  h += "<!--SPLIT-->";
   if (ask && cur.d && isRev()){
     h += `<p class="note">Say the Moroccan Arabic word out loud, then check yourself.</p>
       <div class="row"><button class="btn primary" data-act="reveal">Show the word</button><button class="btn" data-act="dunno">I don't know</button></div>`;
@@ -2199,6 +2219,13 @@ function renderPractice(keep){
     h += `<p class="note">${(st.streak[key(cur)]|0) >= NEED ? "This word is done for this set: right twice in a row." : result.verdict === "correct" ? "Right once. Get it right once more in a row and this word is done." : "This word stays in the set until you get it right twice in a row without a hint."}</p>
       <div class="row"><button class="btn primary" data-act="next">Next word</button>${result.auto && undoSnap ? (result.verdict === "correct" ? `<button class="btn" data-act="overrule" data-v="incorrect">Actually I was wrong</button>` : `<button class="btn" data-act="overrule" data-v="correct">I think I was right</button>`) : ""}</div>`;
   }
+  const cut = h.indexOf("<!--SPLIT-->");
+  if (cut >= 0){
+    const lab = k => { const n = st.streak[k]|0; return k === key(cur) ? "now" : n >= NEED ? "done" : n ? "right once" : "new"; };
+    const list = `<div class="psetlist"><p class="side-h">This set of ${st.words.length}</p>${st.words.map((k, i) => { const w = byKey(k); return w ? `<div class="${k === key(cur) ? "cur" : ""}${(st.streak[k]|0) >= NEED ? " done" : ""}"><span>${i + 1}</span><b>${hideWord && k === key(cur) ? "?" : esc(w.word)}</b><span>${lab(k)}</span></div>` : ""; }).join("")}</div>`;
+    h = `<div class="pcol pleft"><div class="pcat">${topicArt(st.topic)}</div>${h.slice(0, cut)}${list}</div><div class="pcol pright">${h.slice(cut)}</div>`;
+    c.classList.add("split");
+  } else c.classList.remove("split");
   c.innerHTML = h;
   if ($("answer")){
     $("answer").value = draft;
