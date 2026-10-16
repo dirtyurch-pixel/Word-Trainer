@@ -363,6 +363,36 @@ body.splash-on .wrap{visibility:hidden}
 }
 @keyframes pop{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
 @keyframes shake{0%,100%{transform:none}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.ppic{display:none}
+/* Wide PC screens: a bigger centre column; the sides stay free */
+@media (min-width:1600px){
+  html{font-size:125%}
+  .wrap{max-width:1560px}
+  .panels{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:26px 20px;overflow:visible;padding:8px 14px 20px}
+  .panel{width:auto;height:330px}
+  .pnote.swipe{display:none}
+  .pbox{max-width:none}
+  #pbox{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.5fr);grid-template-areas:"top opts" "pic opts" "q opts" "ask opts" "fb opts";grid-template-rows:auto auto auto auto 1fr;gap:12px 32px;padding:32px;align-items:start;min-height:560px}
+  #pbox .ptop{grid-area:top}
+  #pbox .ppic{grid-area:pic;display:block}
+  #pbox .ppic img,#pbox .ppic svg{width:150px;height:150px;border-radius:50%}
+  #pbox .ppic svg{stroke:var(--accent);fill:none;stroke-width:3}
+  #pbox .pq{grid-area:q;margin:0}
+  #pbox .pask{grid-area:ask}
+  #pbox .pfb{grid-area:fb;align-items:flex-start;flex-direction:column;align-content:center}
+  #pbox .popts{grid-area:opts;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:16px;align-self:stretch}
+  #pbox .popt{flex-direction:column;gap:12px;padding:24px;font-size:1.05rem}
+  #pbox .popt.word{justify-content:center;font-size:1.3rem}
+  #pbox .pq.def{font-size:1.2rem}
+}
+@media (min-width:2600px){
+  html{font-size:145%}
+  .wrap{max-width:1900px}
+  .panel{height:340px}
+  .panels{gap:20px 22px}
+  #pbox{min-height:62vh}
+  #pbox .ppic img,#pbox .ppic svg{width:190px;height:190px}
+}
 @media (prefers-reduced-motion:reduce){.panel{transition:none}}
 </style>
 
@@ -397,7 +427,7 @@ body.splash-on .wrap{visibility:hidden}
 
   <section id="view-home">
     <h2 class="ptitle">Choose a subject</h2>
-    <p class="pnote">Swipe sideways to see every subject. Tap one to practise, use flashcards or see its words.</p>
+    <p class="pnote swipe">Swipe sideways to see every subject. Tap one to practise, use flashcards or see its words.</p>
     <div class="panels" id="home-cats"></div>
     <div id="choice" hidden><div class="chbox" role="dialog" aria-modal="true" aria-labelledby="ch-name">
       <div id="ch-art"></div><h2 id="ch-name"></h2><p class="pc" id="ch-count"></p>
@@ -3130,7 +3160,7 @@ function playStart(){
 }
 function playAsk(){
   play.locked = false; const q = play.round[play.i];
-  $("play-area").innerHTML = `<div class="pbox" id="pbox"><div class="ptop"><span>Question ${play.i + 1} of ${play.round.length}</span><span class="pdots">${play.round.map((_, k) => `<i class="${play.res[k] === true ? "r" : play.res[k] === false ? "w" : k === play.i ? "c" : ""}"></i>`).join("")}</span></div>
+  $("play-area").innerHTML = `<div class="pbox" id="pbox"><div class="ppic">${topicArt(play.topic)}</div><div class="ptop"><span>Question ${play.i + 1} of ${play.round.length}</span><span class="pdots">${play.round.map((_, k) => `<i class="${play.res[k] === true ? "r" : play.res[k] === false ? "w" : k === play.i ? "c" : ""}"></i>`).join("")}</span></div>
     ${play.dir === "w" ? `<p class="pq">${esc(q.w.word)}</p><p class="pask">What does it mean?</p>` : `<p class="pq def">${esc(q.w.def)}</p><p class="pask">Which word is this?</p>`}
     <p class="pfb" id="pfb" aria-live="polite">${play.combo >= 3 ? `<span class="combo">${play.combo} in a row!</span>` : ""}</p>
     <div class="popts">${q.opts.map((o, k) => `<button class="btn popt${play.dir === "m" ? " word" : ""}" data-k="${k}"><kbd>${k + 1}</kbd><span>${esc(play.dir === "w" ? o.def : o.word)}</span></button>`).join("")}</div></div>`;
