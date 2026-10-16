@@ -394,6 +394,13 @@ body.splash-on .wrap{visibility:hidden}
 .charpop img{width:100%;height:auto;filter:drop-shadow(0 0 14px rgba(43,255,136,.5))}
 .charpop.w img{filter:drop-shadow(0 0 14px rgba(255,125,112,.5))}
 .charpop.in{opacity:1}
+.charpop.out{opacity:0;transition:opacity .5s}
+.cside{position:relative}
+.sidepop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;background:var(--surface);z-index:2}
+.sidepop img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 0 18px rgba(43,255,136,.5))}
+.sidepop.w img{filter:drop-shadow(0 0 18px rgba(255,125,112,.5))}
+.sidepop.out{opacity:0;transition:opacity .5s}
+@media (prefers-reduced-motion:no-preference){.sidepop{animation:charin .5s cubic-bezier(.2,1.5,.4,1)}}
 @media (prefers-reduced-motion:no-preference){.charpop.in{animation:charin .55s cubic-bezier(.2,1.5,.4,1)}}
 @keyframes charin{from{transform:scale(.2) translateY(40px);opacity:0}to{transform:none;opacity:1}}
 .cbtns .ab{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:88px;padding:8px 14px}
@@ -3440,6 +3447,22 @@ const CHAR = {
   right:'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220"><defs><filter id="g"><feGaussianBlur stdDeviation="3"/></filter></defs><g fill="none" stroke="#2bff88" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><g filter="url(#g)" opacity=".6"><circle cx="90" cy="70" r="46"/></g><circle cx="90" cy="70" r="46" fill="#062a16"/><circle cx="73" cy="62" r="5" fill="#2bff88"/><circle cx="107" cy="62" r="5" fill="#2bff88"/><path d="M68 84q22 22 44 0"/><path d="M50 210c0-50 18-78 40-78s40 28 40 78"/><path d="M128 150l26-22"/><path d="M150 132v-26c0-8 12-8 12 0v20h14c8 0 9 10 4 14l-8 22c-3 6-8 6-14 6h-12"/></g></svg>'),
   wrong:'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220"><g fill="none" stroke="#ff7d70" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><circle cx="90" cy="70" r="46" fill="#2a0c0a"/><path d="M68 60l12 6M112 60l-12 6"/><path d="M68 96q22-20 44 0"/><path d="M50 210c0-50 18-78 40-78s40 28 40 78"/><path d="M128 150l26 22"/><path d="M150 168v26c0 8 12 8 12 0v-20h14c8 0 9-10 4-14l-8-22c-3-6-8-6-14-6h-12"/></g></svg>')
 };
+/* Each category can have its own pair of characters: CHAR_TOPIC["Gods and goddesses"] = {right:"<Zeus picture>", wrong:"<Hades picture>"} */
+const CHAR_TOPIC = {};
+const charFor = (t, ok) => ((CHAR_TOPIC[t] || {})[ok ? "right" : "wrong"]) || CHAR[ok ? "right" : "wrong"];
+let charT = null;
+function charPop(ok){
+  clearTimeout(charT); document.querySelectorAll(".sidepop").forEach(x => x.remove());
+  const img = charFor(cards.topic, ok), side = document.querySelector(ok ? ".cside.knew" : ".cside.miss"), pop = $("charpop");
+  if (pop){ pop.innerHTML = ""; pop.className = "charpop"; }
+  if (side && side.offsetParent){
+    const el = document.createElement("div"); el.className = "sidepop " + (ok ? "r" : "w"); el.innerHTML = `<img src="${img}" alt="">`; side.appendChild(el);
+    charT = setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 500); }, 1500);
+  } else if (pop){
+    pop.innerHTML = `<img src="${img}" alt="">`; pop.className = "charpop " + (ok ? "r" : "w"); void pop.offsetWidth; pop.classList.add("in");
+    charT = setTimeout(() => pop.classList.add("out"), 1500);
+  }
+}
 const cards = {mode:"study", topic:"", list:null, cur:null, phase:"ask", verdict:null, fb:"", typed:"", again:[], good:[], combo:0, order:null, test:null, waitT:null};
 const fcS = () => { S.fc = S.fc || {c:{}, nd:{}, pts:{}, tot:0, tests:{}}; return S.fc; };
 const FMIN = 6e4, DAYMS = 864e5;
@@ -3584,8 +3607,7 @@ function fcShowResult(){
   const big = v === "correct" ? `<span class="ok">✓ RIGHT!</span>` : v === "partial" ? `<span class="pt">≈ PARTLY RIGHT</span>` : `<span class="no">✗ WRONG</span>`;
   el.innerHTML = `<div class="fcres ${v}">${big}${cards.typed ? `<p class="yours">You typed: ${esc(cards.typed)}</p>` : ""}${cards.fb ? `<p class="note">${esc(cards.fb)}</p>` : ""}${cards.mode === "study" ? `<p class="note">Suggested: ${v === "correct" ? "Good" : v === "partial" ? "Hard" : "Again"}. Pick any button.</p>` : ""}</div>`;
   sfx(v === "correct" ? "correct" : v === "partial" ? "partial" : "incorrect");
-  pop.innerHTML = v === "partial" ? "" : `<img src="${v === "correct" ? CHAR.right : CHAR.wrong}" alt="">`;
-  pop.className = "charpop " + (v === "correct" ? "r" : "w"); void pop.offsetWidth; pop.classList.add("in");
+  if (v === "partial"){ pop.innerHTML = ""; } else charPop(v === "correct");
 }
 function cardsRate(b){
   if (cards.mode !== "study" || cards.phase !== "shown") return;
