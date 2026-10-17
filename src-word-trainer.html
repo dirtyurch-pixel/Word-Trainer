@@ -503,6 +503,38 @@ body.splash-on .wrap{visibility:hidden}
 .hub-sub img{width:100%;aspect-ratio:1;object-fit:contain;border-radius:50%}
 .hub-wm{background:url(wm-stage.jpg) center 30%/cover}
 .hub-wm img{position:absolute;left:18%;top:4%;height:78%;width:auto;filter:drop-shadow(0 0 10px rgba(43,255,136,.4))}
+.hub-sp{background:radial-gradient(circle at 50% 38%,rgba(43,255,136,.18),transparent 62%),#000}
+.hub-sp i{position:absolute;left:0;right:0;top:6%;text-align:center;font-style:normal;font-family:var(--display);font-weight:800;font-size:13rem;line-height:1;color:transparent;-webkit-text-stroke:2px var(--accent);opacity:.3}
+.hub-sp img{position:absolute;left:18%;top:8%;height:72%;width:auto;filter:drop-shadow(0 0 10px rgba(43,255,136,.4))}
+/* Speed round */
+.sp-side{display:none}
+@media (min-width:1600px){
+  .sp-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,900px) minmax(0,1fr);gap:24px;align-items:end}
+  .sp-side{display:block}.sp-side img{display:block;width:100%;max-width:340px;margin:0 auto;filter:drop-shadow(0 0 10px rgba(43,255,136,.4))}
+}
+#view-speed .pbox{max-width:900px}
+.sp-big{font-family:var(--display);font-weight:800;font-size:6rem;line-height:1;margin:0;color:var(--accent);text-shadow:0 0 30px var(--glow)}
+.sp-bests{display:flex;justify-content:center;flex-wrap:wrap;gap:8px 24px;font-family:var(--mono);color:var(--muted);margin:0}.sp-bests b{color:var(--accent);font-size:1.3em}
+.sp-top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+.sp-score,.sp-run{display:flex;flex-direction:column;font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.sp-score{align-items:flex-start}.sp-run{align-items:flex-end}
+.sp-score b,.sp-run b{font-family:var(--display);font-size:1.9rem;color:var(--ink);line-height:1.1}
+.sp-run.hot b{color:var(--part);text-shadow:0 0 14px rgba(255,190,60,.7)}
+.sp-clock{font-family:var(--display);font-weight:800;font-size:3.4rem;line-height:1;color:var(--accent);text-shadow:0 0 18px var(--glow);min-width:3ch;text-align:center}
+.sp-clock.low{color:var(--bad);text-shadow:0 0 18px rgba(255,80,80,.6)}
+@media (prefers-reduced-motion:no-preference){.sp-clock.low{animation:sppulse 1s ease-in-out infinite}}
+@keyframes sppulse{50%{transform:scale(1.12)}}
+.sp-bar{height:6px;background:var(--line);overflow:hidden}.sp-bar i{display:block;height:100%;background:var(--accent);box-shadow:0 0 10px var(--glow)}.sp-bar.low i{background:var(--bad)}
+.sp-q{min-height:4.6em;display:flex;align-items:center;justify-content:center;font-size:1.25rem!important}
+.sp-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sp-opts .popt{align-items:center;min-height:3.4em}
+.sp-pen{font-family:var(--display);font-weight:800;color:var(--bad);font-size:1.3rem}
+.sp-res{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.sp-res div{border:1px solid var(--line);padding:8px;background:#000}.sp-res b{display:block;font-family:var(--display);font-size:1.5rem;color:var(--accent)}.sp-res span{font-size:.8rem;color:var(--muted)}
+.sp-miss{display:flex;flex-direction:column;gap:6px;text-align:left;max-height:40vh;overflow:auto}
+.sp-miss p{margin:0;padding:6px 10px;border-left:3px solid var(--bad);background:#000}.sp-miss b{color:var(--accent)}
+.sp-new{font-family:var(--display);font-weight:800;font-size:1.6rem;color:var(--part);text-shadow:0 0 16px rgba(255,190,60,.6);margin:0}
+@media (max-width:560px){.sp-opts{grid-template-columns:1fr}.sp-res{grid-template-columns:1fr 1fr}.sp-clock{font-size:2.8rem}}
 /* Studio */
 #view-wm{gap:10px}
 .wm-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
@@ -654,8 +686,14 @@ body.splash-on .wrap{visibility:hidden}
   <section id="view-hub" hidden>
     <div class="hub">
       <button class="hubp" id="hub-subjects"><span class="hubart hub-sub" id="hub-sub-art"></span><b>Choose a Subject</b><span class="hubd">Practise, flashcards, games and word lists for each of your subjects</span></button>
+      <button class="hubp" id="hub-speed"><span class="hubart hub-sp"><i>60</i><img src="wm-you-excited.webp" alt=""></span><b>Speed Round</b><span class="hubd">60 seconds on the clock: tap the right word, build a streak, beat your best</span></button>
       <button class="hubp" id="hub-wm"><span class="hubart hub-wm"><img src="wm-socrates-ask.webp" alt=""></span><b>Word Master</b><span class="hubd">The quiz show: three rounds in the black chair, against the clock and a rival</span></button>
     </div>
+  </section>
+
+  <section id="view-speed" hidden>
+    <div class="play-head"><button class="btn small" id="sp-back">Home</button><h2 class="ptitle">Speed Round</h2></div>
+    <div class="sp-wrap"><div class="sp-side" aria-hidden="true"><img id="sp-qm" alt=""></div><div id="sp-area"></div><div class="sp-side" aria-hidden="true"><img id="sp-you" alt=""></div></div>
   </section>
 
   <section id="view-wm" hidden>
@@ -2264,7 +2302,7 @@ function streak(){
 }
 
 function clean(d){
-  const out = {progress:{}, custom:[], days:{}, goal:10, topic:"", rev:false, set:null, badges:{}, games:{mc:{}}, fc:{c:{}, nd:{}, pts:{}, tot:0, tests:{}}, wm:{games:[], champ:{}, miss:{}}};
+  const out = {progress:{}, custom:[], days:{}, goal:10, topic:"", rev:false, set:null, badges:{}, games:{mc:{}, sp:{}}, fc:{c:{}, nd:{}, pts:{}, tot:0, tests:{}}, wm:{games:[], champ:{}, miss:{}}};
   if (!d || typeof d !== "object") return out;
   if (d.progress && typeof d.progress === "object") for (const k in d.progress){
     const p = d.progress[k]; if (!p || typeof p.level !== "number") continue;
@@ -2298,6 +2336,7 @@ function clean(d){
     if (W.miss && typeof W.miss === "object") for (const k of Object.keys(W.miss).slice(0, 500)) o.miss[String(k).slice(0, 80)] = Math.max(0, W.miss[k] | 0);
   }
   if (d.games && d.games.mc && typeof d.games.mc === "object") for (const t in d.games.mc){ const g = d.games.mc[t]; if (g && typeof g === "object") out.games.mc[String(t).slice(0,40)] = {best:Math.max(0, Math.min(10, g.best|0)), plays:Math.max(0, g.plays|0)}; }
+  if (d.games && d.games.sp && typeof d.games.sp === "object") for (const t in d.games.sp){ const g = d.games.sp[t]; if (g && typeof g === "object") out.games.sp[String(t).slice(0,40)] = {best:Math.max(0, Math.min(999, g.best|0)), plays:Math.max(0, g.plays|0)}; }
   if (d.badges && typeof d.badges === "object") for (const k in d.badges) if (/^[a-z-]{3,30}$/.test(k) && /^\d{4}-\d\d-\d\d$/.test(d.badges[k])) out.badges[k] = d.badges[k];
   return out;
 }
@@ -2861,6 +2900,7 @@ async function syncRun(quiet){
       for (const k in inc.days) S.days[k] = Math.max(S.days[k]|0, inc.days[k]|0);
       S.badges = S.badges || {}; for (const k in inc.badges) if (!S.badges[k] || inc.badges[k] < S.badges[k]) S.badges[k] = inc.badges[k];
       S.games = S.games || {mc:{}}; S.games.mc = S.games.mc || {}; for (const t in inc.games.mc){ const x = S.games.mc[t] || {best:0, plays:0}, y = inc.games.mc[t]; S.games.mc[t] = {best:Math.max(x.best, y.best), plays:Math.max(x.plays, y.plays)}; }
+      S.games.sp = bestMerge(S.games.sp, inc.games.sp);
       S.fc = fcMerge(S.fc, inc.fc); S.wm = wmMerge(S.wm, inc.wm);
       if (remote.pics) for (const k in remote.pics) if (!pics[k] && typeof remote.pics[k] === "string" && remote.pics[k].startsWith("data:image/")){ pics[k] = remote.pics[k]; idb("readwrite", st => st.put(remote.pics[k], k)).catch(() => {}); changed = true; }
       if (JSON.stringify(S) !== before){ changed = true; try { localStorage.setItem(LS, JSON.stringify(S)); } catch(e){} }
@@ -3241,6 +3281,7 @@ function mergeState(a, b){
   for (const k in b.days) a.days[k] = Math.max(a.days[k]|0, b.days[k]|0);
   if (b.set) a.set = b.set;
   a.games = a.games || {mc:{}}; a.games.mc = a.games.mc || {}; for (const t in ((b.games || {}).mc || {})){ const x = a.games.mc[t] || {best:0, plays:0}, y = b.games.mc[t]; a.games.mc[t] = {best:Math.max(x.best, y.best), plays:Math.max(x.plays, y.plays)}; }
+  a.games.sp = bestMerge(a.games.sp, (b.games || {}).sp);
   a.fc = fcMerge(a.fc, b.fc); a.wm = wmMerge(a.wm, b.wm);
   a.badges = a.badges || {}; for (const k in (b.badges || {})) if (!a.badges[k] || b.badges[k] < a.badges[k]) a.badges[k] = b.badges[k];
   a.goal = b.goal; a.topic = b.topic; a.rev = b.rev;
@@ -3354,16 +3395,18 @@ function syncClaude(){
     out.textContent = "Claude reads your answers and results, then explains where your understanding is strong, where it slips, and what to do about it."; }
 }
 
-const VIEWS = ["hub","home","practice","cards","words","grade","play","wm"];
+const VIEWS = ["hub","home","practice","cards","words","grade","play","wm","speed"];
 function show(tab){
   for (const t of VIEWS){ $("view-"+t).hidden = t !== tab; if ($("tab-"+t)) $("tab-"+t).classList.toggle("on", t === tab); }
   if (tab !== "play" && typeof play === "object") play.on = false;
-  if (tab === "hub" || tab === "wm") $("tab-home").classList.add("on");
+  if (tab === "hub" || tab === "wm" || tab === "speed") $("tab-home").classList.add("on");
+  if (tab !== "speed" && typeof sp === "object") spStop();
+  if (tab === "speed") spMenu();
   if (tab !== "wm" && typeof wm === "object" && wm.g) wmAbort();
   if (tab === "wm") wmLobby();
   if (tab === "hub") renderHub();
-  document.querySelector(".meter").hidden = ["home", "play", "hub", "wm"].includes(tab);
-  const rainy = ["home", "hub", "wm"].includes(tab); document.body.classList.toggle("home-on", rainy); if ($("splash").hidden) setRain(rainy);
+  document.querySelector(".meter").hidden = ["home", "play", "hub", "wm", "speed"].includes(tab);
+  const rainy = ["home", "hub", "wm", "speed"].includes(tab); document.body.classList.toggle("home-on", rainy); if ($("splash").hidden) setRain(rainy);
   if (tab === "home") renderHome();
   if (tab === "grade"){ renderProg(); renderCatGrades(); }
   if (tab === "cards") cardsOpen();
@@ -3440,7 +3483,7 @@ function playMenu(){
   $("play-title").textContent = "Play: " + play.topic;
   $("play-area").innerHTML = `<div class="pbox"><div class="pgames">
       <button class="btn pgame" data-p="mc"><b>Multiple choice</b><span>Pick the right answer from 4</span>${g ? `<em>Best ${g.best}/${PLAY_N}</em>` : ""}</button>
-      <button class="btn pgame" disabled><b>Speed round</b><span>60 seconds, beat your best</span><em>COMING NEXT</em></button>
+      <button class="btn pgame" data-p="sp"><b>Speed round</b><span>60 seconds, beat your best</span>${spBest(play.topic).best ? `<em>Best ${spBest(play.topic).best}</em>` : ""}</button>
       <button class="btn pgame" disabled><b>Memory pairs</b><span>Match words to meanings</span><em>LATER</em></button>
       <button class="btn pgame" disabled><b>Fill the gap</b><span>Finish the sentence</span><em>LATER</em></button>
     </div><p class="note">Which way round?</p>
@@ -3487,10 +3530,110 @@ $("play-area").addEventListener("click", e => {
   const b = e.target.closest("[data-p]"); if (!b) return;
   if (b.dataset.p === "mc") playStart();
   else if (b.dataset.p === "menu") playMenu();
+  else if (b.dataset.p === "sp"){ sp.topic = play.topic; show("speed"); }
   else if (b.dataset.p === "missed"){ cards.topic = play.topic; cards.list = []; show("cards"); cardsStart(play.missed); }
 });
 document.addEventListener("keydown", e => { if (play.on && !$("view-play").hidden && /^[1-4]$/.test(e.key) && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) playPick(+e.key - 1); });
 $("play-back").onclick = () => show("home");
+
+/* Speed round: 60 seconds of quick-fire meanings, tap the word from 4. It keeps its own bests and never changes your progress. */
+const SP_T = 60000, SP_PEN = 3000, SP_RUN = 5;
+const sp = {topic:"", on:false, g:null, tick:null, t:null, side:null};
+try { sp.topic = localStorage.getItem("wt-sp-topic") || ""; } catch(e){}
+const bestMerge = (a, b) => { a = a || {}; for (const t in b || {}){ const x = a[t] || {best:0, plays:0}, y = b[t]; a[t] = {best:Math.max(x.best, y.best), plays:Math.max(x.plays, y.plays)}; } return a; };
+const spKey = t => t || "*";   // "*" = all subjects
+const spBest = t => (((S.games || {}).sp || {})[spKey(t)]) || {best:0, plays:0};
+const spTop = () => Math.max(0, ...Object.values((S.games || {}).sp || {}).map(x => x.best));
+const spPool = t => allWords().filter(w => !w.deck && w.def && (!t || w.topic === t));
+function spSide(qm, you, ms){
+  clearTimeout(sp.side);
+  if (qm) $("sp-qm").src = wmImg("socrates", qm); if (you) $("sp-you").src = wmImg("you", you);
+  if (ms) sp.side = setTimeout(() => spSide("base", sp.on && sp.g && sp.g.left <= 10000 ? "sweat" : "idle"), ms);
+}
+function spStop(){ sp.on = false; clearInterval(sp.tick); clearTimeout(sp.t); clearTimeout(sp.side); }
+function spMenu(){
+  spStop(); spSide("curious", "idle");
+  const ts = wmTopics(); if (sp.topic && !ts.includes(sp.topic)) sp.topic = "";
+  $("sp-area").innerHTML = `<div class="pbox"><p class="sp-big">60</p><h3 class="wm-h">Beat the clock</h3>
+    <p class="note">A meaning appears: tap the word it describes, as many as you can in 60 seconds. Get ${SP_RUN} right in a row and every answer after that is worth double until you miss. A wrong answer costs 3 seconds, so think before you tap.</p>
+    <label class="wm-lab">Subject <select id="sp-topic"><option value="">All subjects</option>${ts.map(t => `<option ${t === sp.topic ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label>
+    <p class="sp-bests"><span>Your best here: <b>${spBest(sp.topic).best}</b></span><span>Best overall: <b>${spTop()}</b></span></p>
+    <div class="row" style="justify-content:center"><button class="btn primary" id="sp-go">Start the clock</button></div>
+    <p class="note">Just for fun: the speed round doesn't change your progress or grades.</p></div>`;
+  $("sp-topic").onchange = e => { sp.topic = e.target.value; try { localStorage.setItem("wt-sp-topic", sp.topic); } catch(err){} spMenu(); };
+  $("sp-go").onclick = spStart; $("sp-go").focus({preventScroll:true});
+}
+function spStart(){
+  const pool = spPool(sp.topic); if (pool.length < 4){ toast("Not enough words in this subject yet."); return; }
+  sp.g = {left:SP_T, last:performance.now(), sec:60, score:0, run:0, bestRun:0, n:0, right:0, miss:[], order:shuffle(pool), i:0, lock:false};
+  sp.on = true; clearInterval(sp.tick); sp.tick = setInterval(spTick, 100); spSide("ask", "idle"); spAsk();
+}
+// three wrong words from the same subject, of similar length, so the right one doesn't stand out
+function spOpts(w){
+  const lw = w.word.toLowerCase(), same = shuffle(allWords().filter(x => !x.deck && x.def && x.topic === w.topic && x.word.toLowerCase() !== lw && x.def !== w.def));
+  const near = same.sort((a, b) => Math.abs(a.word.length - w.word.length) - Math.abs(b.word.length - w.word.length)).slice(0, 8), out = [];
+  for (const x of shuffle(near).concat(shuffle(spPool("")))) if (out.length < 3 && x.word.toLowerCase() !== lw && !out.some(o => o.word.toLowerCase() === x.word.toLowerCase())) out.push(x);
+  return shuffle([w].concat(out));
+}
+const spRunHTML = g => `<b>${g.run}</b><span>${g.run >= SP_RUN ? "🔥 double points" : "in a row"}</span>`;
+function spAsk(){
+  const g = sp.g; if (g.i >= g.order.length){ g.order = shuffle(g.order); g.i = 0; }
+  const w = g.order[g.i++]; g.cur = w; g.opts = spOpts(w); g.lock = false;
+  $("sp-area").innerHTML = `<div class="pbox" id="sp-box"><div class="sp-top"><div class="sp-score"><b id="sp-score">${g.score}</b><span>points</span></div><div class="sp-clock" id="sp-clock"></div><div class="sp-run${g.run >= SP_RUN ? " hot" : ""}" id="sp-run">${spRunHTML(g)}</div></div>
+    <div class="sp-bar" id="sp-bar"><i></i></div>
+    <p class="pq def sp-q">${esc(wmClue(w))}</p>
+    <div class="sp-opts">${g.opts.map((o, k) => `<button class="btn popt word" data-k="${k}"><kbd>${k + 1}</kbd><span>${esc(o.word)}</span></button>`).join("")}</div>
+    <p class="pfb" id="sp-fb" aria-live="polite"></p></div>`;
+  spClock();
+}
+function spClock(){
+  const g = sp.g, c = $("sp-clock"), bar = $("sp-bar"); if (!g || !c) return;
+  const low = g.left <= 10000; c.textContent = Math.max(0, Math.ceil(g.left/1000)); c.classList.toggle("low", low);
+  bar.classList.toggle("low", low); bar.firstChild.style.width = Math.max(0, g.left/SP_T*100) + "%";
+}
+function spTick(){
+  const g = sp.g, now = performance.now(), dt = now - g.last; g.last = now;
+  if (!sp.on) return;
+  if (!g.lock) g.left -= dt;   // the clock waits while an answer is being shown
+  const s = Math.max(0, Math.ceil(g.left/1000));
+  if (s !== g.sec){ g.sec = s; if (s <= 10 && s > 0) sfx("tick"); if (s === 10) spSide(null, "sweat"); }
+  spClock(); if (g.left <= 0) spEnd();
+}
+function spPick(k){
+  const g = sp.g; if (!sp.on || !g || g.lock || !g.opts[k]) return; g.lock = true;
+  const ok = g.opts[k] === g.cur; g.n++;
+  document.querySelectorAll("#sp-area .popt").forEach((b, n) => { b.disabled = true; b.classList.add(g.opts[n] === g.cur ? "right" : n === k ? "wrong" : "dim"); });
+  if (ok){
+    g.run++; g.right++; g.bestRun = Math.max(g.bestRun, g.run); const pts = g.run > SP_RUN ? 2 : 1; g.score += pts; sfx("correct");
+    $("sp-fb").innerHTML = `<span class="ok">+${pts}</span>${g.run === SP_RUN ? `<span class="combo">${SP_RUN} in a row: double points!</span>` : ""}`;
+    if (g.run === SP_RUN || (g.run > SP_RUN && g.run % 5 === 0)) spSide("applaud", "excited", 1500); else spSide("correct", "right", 900);
+  } else {
+    g.run = 0; g.left = Math.max(0, g.left - SP_PEN); if (!g.miss.includes(g.cur)) g.miss.push(g.cur); sfx("incorrect");
+    $("sp-fb").innerHTML = `<span class="no">✗</span><span class="sp-pen">−3 seconds</span>`; $("sp-box").classList.add("flash-no");
+    spSide("sigh", "wrong", 1500);
+  }
+  $("sp-score").textContent = g.score; $("sp-run").innerHTML = spRunHTML(g); $("sp-run").classList.toggle("hot", g.run >= SP_RUN); spClock();
+  sp.t = setTimeout(() => { if (sp.on && sp.g === g){ if (g.left <= 0) spEnd(); else spAsk(); } }, ok ? 350 : 1200);
+}
+function spEnd(){
+  const g = sp.g; if (!g || g.done) return; g.done = true; spStop(); sfx("buzz");
+  S.games = S.games || {mc:{}}; S.games.sp = S.games.sp || {};
+  const k = spKey(sp.topic), old = S.games.sp[k] || {best:0, plays:0}, topBefore = spTop(), isBest = g.score > old.best;
+  S.games.sp[k] = {best:Math.max(old.best, g.score), plays:old.plays + 1}; save();
+  const overall = g.score > topBefore, name = sp.topic || "all subjects";
+  $("sp-area").innerHTML = `<div class="pbox"><h3 class="wm-h">Time's up!</h3><p class="pscore">${g.score}</p><p class="note">points</p>
+    ${isBest && g.score ? `<p class="sp-new">${overall ? "New best ever!" : "New best for " + esc(name) + "!"}</p>` : `<p class="note">Your best for ${esc(name)}: ${S.games.sp[k].best}</p>`}
+    <div class="sp-res"><div><b>${g.right}/${g.n}</b><span>right</span></div><div><b>${g.bestRun}</b><span>longest streak</span></div><div><b>${S.games.sp[k].best}</b><span>best here</span></div><div><b>${spTop()}</b><span>best overall</span></div></div>
+    ${g.miss.length ? `<p class="note">Words to look at again</p><div class="sp-miss">${g.miss.map(w => `<p><b>${esc(w.word)}</b>: ${esc(w.def)}</p>`).join("")}</div>` : g.n ? `<p class="note">No mistakes. Superb!</p>` : ""}
+    <div class="row" style="justify-content:center"><button class="btn primary" id="sp-again">Play again</button>${g.miss.length ? `<button class="btn" id="sp-prac">Practise these as flashcards</button>` : ""}<button class="btn" id="sp-menu">Change subject</button></div></div>`;
+  $("sp-again").onclick = spStart; $("sp-menu").onclick = spMenu; $("sp-again").focus({preventScroll:true});
+  if ($("sp-prac")) $("sp-prac").onclick = () => { cards.topic = sp.topic || g.miss[0].topic; cards.list = []; show("cards"); cardsStart(g.miss.slice()); };
+  if (isBest && g.score){ celebrate(overall ? "New best ever: " + g.score + " points!" : "New best for " + name + ": " + g.score + " points!"); spSide("trophy", "win"); }
+  else spSide(g.score ? "applaud" : "sigh", g.score ? "idle" : "lose");
+}
+$("sp-area").addEventListener("click", e => { const o = e.target.closest(".popt"); if (o) spPick(+o.dataset.k); });
+document.addEventListener("keydown", e => { if (sp.on && !$("view-speed").hidden && /^[1-4]$/.test(e.key) && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) spPick(+e.key - 1); });
+$("sp-back").onclick = () => show("hub");
 $("ch-play").onclick = () => { $("choice").hidden = true; openPlay(chosen); };
 /* Word Master: a Mastermind-style quiz show in three rounds. It keeps its own scores and never changes your progress. */
 const WM_OPP = [
@@ -3943,6 +4086,7 @@ $("wm-quit").onclick = () => { if (wm.g && !wm.g.done && !confirm("Leave the stu
 function renderHub(){ const ts = ["Ancient Greece", "Gods and goddesses", "Arab history", "Symbolism"]; $("hub-sub-art").innerHTML = ts.map(t => CAT_IMG[t] ? `<img src="${CAT_IMG[t]}" alt="">` : "").join(""); }
 $("hub-subjects").onclick = () => show("home");
 $("hub-wm").onclick = () => show("wm");
+$("hub-speed").onclick = () => show("speed");
 
 
 /* Badges: earned once and kept for good */
@@ -4355,6 +4499,7 @@ document.body.classList.add("splash-on"); setRain(true); renderBadges(); checkBa
       for (const k in (S.badges || {})) if (!remote.badges[k]) remote.badges[k] = S.badges[k];
       remote.fc = fcMerge(remote.fc, S.fc); remote.wm = wmMerge(remote.wm, S.wm);
       for (const t in ((S.games || {}).mc || {})){ const x = remote.games.mc[t] || {best:0, plays:0}, y = S.games.mc[t]; remote.games.mc[t] = {best:Math.max(x.best, y.best), plays:Math.max(x.plays, y.plays)}; }
+      remote.games.sp = bestMerge(remote.games.sp, (S.games || {}).sp);
       const untouched = mode === "ask" && !hints && !($("answer") && $("answer").value);
       S = remote;
       try { localStorage.setItem(LS, JSON.stringify(S)); } catch(e){}

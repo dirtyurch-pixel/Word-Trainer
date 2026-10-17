@@ -38,8 +38,9 @@ Playwright + Chromium (`/opt/pw-browsers/chromium`, NODE_PATH=$(npm root -g)), s
 - Progress in the Claude and GitHub versions is separate; the backup file moves it between them. Urch has the GitHub version installed on his Samsung Galaxy Tab S4 and as a shortcut on his PC.
 
 ## App structure
-- State `S` in localStorage "word-trainer-state": progress, custom, days, goal, topic, rev, set (h = hint flag), badges, games.mc, fc, wm. `clean()` validates. Sync (gist `syncRun`, artifact db remote merge, `mergeState`) must merge badges, games, fc (`fcMerge`) and wm (`wmMerge`) — keep that when adding state.
-- Views: VIEWS = ["hub","home","practice","cards","words","grade","play","wm"]. Matrix welcome screen → hub with two slanted panels: Choose a Subject (→ home) and Word Master (→ wm). Home tab goes to hub.
+- State `S` in localStorage "word-trainer-state": progress, custom, days, goal, topic, rev, set (h = hint flag), badges, games.mc, games.sp, fc, wm. `clean()` validates. Sync (gist `syncRun`, artifact db remote merge, `mergeState`) must merge badges, games (mc; sp via `bestMerge`), fc (`fcMerge`) and wm (`wmMerge`) — keep that when adding state.
+- Views: VIEWS = ["hub","home","practice","cards","words","grade","play","wm","speed"]. Matrix welcome screen → hub with three slanted panels: Choose a Subject (→ home), Speed Round (→ speed) and Word Master (→ wm). Home tab goes to hub.
+- Speed Round (agreed with Urch): fixed 60 s (no bonus time, so bests compare), a meaning (`wmClue`, word hidden) and 4 word buttons (2x2; keys 1–4); wrong words from the same subject and similar length (`spOpts`). +1 per right; after 5 in a row every right answer is 2 until a miss; a wrong answer costs 3 s; the clock pauses while an answer is shown. Subject or All subjects. Bests in S.games.sp[topic or "*"] = {best, plays}. End: score, right/answered, longest streak, best here/overall, missed words with meanings, Practise these (flashcards Test via `cardsStart`). Socrates and Urch's own character react on the sides at ≥1600 px. No voice. Also reachable from the subject's Play menu. Doesn't affect main progress.
 - Widescreen: @media min-width 1600 (html 125%, .wrap 1560px) and 2600 (145%, 1900px); grid layouts for practice, cards, words.
 - My grade: per-category grades (no grade for unstarted categories). Multiple choice game in "play" (own scoring, doesn't affect progress, right/wrong sounds).
 - Badges and 21 category icons: Urch's own ChatGPT images.
@@ -59,5 +60,5 @@ Playwright + Chromium (`/opt/pw-browsers/chromium`, NODE_PATH=$(npm root -g)), s
 ## Open / next
 - FIRST in a new chat: Urch will confirm this build works on his devices. Don't change anything until he does.
 - Quizmaster voice: done and confirmed working by Urch (Piper "alan", made slower and deeper — he picked it after hearing samples; pause after answers agreed at 1.2 s). He'd liked an ElevenLabs preview ("posh well-spoken old man") but copying it isn't possible for free and isn't allowed by ElevenLabs. If the tablet is too slow speaking, options: COOP/COEP headers from the service worker to enable wasm threads (check picture finder images still load), or a lighter voice.
-- Later (he deferred): character pop-up sets for other flashcard categories; speed-round game; widescreen layout for My grade; Quiz master badge and Word Master champion badge.
+- Later (he deferred): character pop-up sets for other flashcard categories; widescreen layout for My grade; Quiz master badge and Word Master champion badge.
 - He also plans a separate Arabic learning app.
