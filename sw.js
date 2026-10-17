@@ -1,5 +1,5 @@
 /* Keeps the app and its recordings and pictures on the device so it works offline. */
-const CACHE = "word-trainer-v52";
+const CACHE = "word-trainer-v53";
 const VOX = "word-trainer-voice-1";  /* Socrates' studio voice (vox-*): kept between app updates so it only downloads once. Change the number after rebuilding it with src-voice.py. */
 const MUSIC = "word-trainer-music-1";  /* the music (music-*), kept between app updates too. Change the number if a track is replaced under the same name. */
 const CORE = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png"];

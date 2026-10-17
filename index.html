@@ -300,6 +300,22 @@ body.leaving #splash,body.leaving #wbg{opacity:0}
 #mus-btn{position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;z-index:31;font-family:var(--mono);font-size:.95rem;color:var(--accent);background:rgba(0,0,0,.6);border:1px solid var(--accent);padding:8px 12px;cursor:pointer;box-shadow:0 0 10px var(--glow)}
 #mus-btn:hover,#mus-btn:focus-visible{background:var(--accent);color:#000;outline:none}
 body:not(.splash-on) #mus-btn{display:none}
+#mbar{position:fixed;left:0;right:0;bottom:0;z-index:25;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));background:rgba(0,8,3,.92);border-top:1px solid var(--line);box-shadow:0 -4px 18px rgba(43,255,136,.12);font-family:var(--mono)}
+#mbar[hidden]{display:none}
+#mbar button{font-family:var(--mono);color:var(--accent);background:transparent;border:1px solid transparent;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:1rem;line-height:1}
+#mbar button:hover,#mbar button:focus-visible{border-color:var(--accent);outline:none;box-shadow:0 0 8px var(--glow)}
+#mb-play{min-width:44px}
+#mb-name{max-width:min(38vw,420px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.04em}
+#mb-name::before{content:"♪ ";opacity:.7}
+#mb-shuf{font-size:.8rem!important;opacity:.5}#mb-shuf.on{opacity:1;text-shadow:0 0 8px var(--glow)}
+#mb-vol{width:110px;accent-color:var(--accent)}
+.mb-line{position:absolute;left:0;right:0;top:-1px;height:2px}.mb-line i{display:block;height:100%;width:0;background:var(--accent);box-shadow:0 0 6px var(--glow)}
+#mb-list{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);min-width:min(320px,calc(100vw - 32px));background:rgba(0,10,4,.97);border:1px solid var(--accent);box-shadow:0 0 18px var(--glow);padding:6px;display:flex;flex-direction:column}
+#mb-list[hidden]{display:none}
+#mb-list button{text-align:left;padding:10px 12px!important}#mb-list button.on{background:rgba(43,255,136,.12)}
+body.mbar-on .wrap{padding-bottom:72px}
+body.mbar-on .toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+@media (max-width:600px){#mb-vol{display:none}#mbar{gap:2px;padding-left:6px;padding-right:6px}#mb-name{max-width:42vw}}
 body.calm #wbg .wpic,body.calm #wbg .wglow,body.calm .wbig.done,body.calm .enter{animation:none}
 @media (prefers-reduced-motion:reduce){#wbg .wpic,#wbg .wglow,.wbig.done,.enter{animation:none}}
 /* Subject panels */
@@ -935,6 +951,14 @@ body.calm #wbg .wpic,body.calm #wbg .wglow,body.calm .wbig.done,body.calm .enter
   <div id="bpop" hidden><div class="bpbox" role="dialog" aria-modal="true" aria-labelledby="bp-name"><p class="bp-eye" id="bp-eye">Badge earned</p><img id="bp-img" alt=""><h2 id="bp-name"></h2><p id="bp-how"></p><p class="note" id="bp-when"></p><button class="btn primary" id="bp-ok">Brilliant</button></div></div>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <canvas id="fx" aria-hidden="true"></canvas>
+  <div id="mbar" role="region" aria-label="Music player" hidden>
+    <div class="mb-line"><i id="mb-pos"></i></div>
+    <button id="mb-prev" aria-label="Previous track">⏮&#xFE0E;</button><button id="mb-play" aria-label="Play music">▶</button><button id="mb-next" aria-label="Next track">⏭&#xFE0E;</button>
+    <button id="mb-name" aria-haspopup="true" aria-expanded="false" title="Choose a track">Music</button>
+    <button id="mb-shuf" aria-pressed="false" title="Shuffle">Shuffle</button>
+    <input type="range" id="mb-vol" min=".05" max="1" step=".05" aria-label="Music volume">
+    <div id="mb-list" hidden></div>
+  </div>
   <p class="note" id="save-note" hidden>Your progress is saved on this device.</p>
 </div>
 
@@ -3724,7 +3748,7 @@ function save(){
 }
 
 /* Settings tab: this device's preferences, kept apart from progress (S) */
-const PREF_DEF = {setSize:4, need:2, hints:true, hide:[], fcTestN:20, fcFlip:false, spSecs:60, wmShort:false, vol:1, hearVoice:"", hearRate:.85, text:1, motion:false, rain:"on", pops:true, music:true, musicVol:.5};
+const PREF_DEF = {setSize:4, need:2, hints:true, hide:[], fcTestN:20, fcFlip:false, spSecs:60, wmShort:false, vol:1, hearVoice:"", hearRate:.85, text:1, motion:false, rain:"on", pops:true, music:true, musicVol:.5, musShuf:true, musBar:true, musLast:-1};
 const PREF = Object.assign({}, PREF_DEF);
 try { const p = JSON.parse(localStorage.getItem("wt-settings") || "{}"); for (const k in PREF_DEF) if (k in p && typeof p[k] === typeof PREF_DEF[k]) PREF[k] = p[k]; } catch(e){}
 const prefSave = () => { try { localStorage.setItem("wt-settings", JSON.stringify(PREF)); } catch(e){} };
@@ -3808,7 +3832,7 @@ function speak(word){
 }
 function tts(word){
   try { const u = new SpeechSynthesisUtterance(word); u.lang = /[\u0600-\u06FF]/.test(word) ? "ar-SA" : "en-GB"; u.rate = PREF.hearRate;
-    const hv = !/[\u0600-\u06FF]/.test(word) && PREF.hearVoice && speechSynthesis.getVoices().find(v => v.name === PREF.hearVoice); if (hv){ u.voice = hv; u.lang = hv.lang; } speechSynthesis.cancel(); speechSynthesis.speak(u); } catch(e){}
+    const hv = !/[\u0600-\u06FF]/.test(word) && PREF.hearVoice && speechSynthesis.getVoices().find(v => v.name === PREF.hearVoice); if (hv){ u.voice = hv; u.lang = hv.lang; } speechSynthesis.cancel(); if (typeof mus === "object"){ musDuck(); u.onend = u.onerror = musUnduck; } speechSynthesis.speak(u); } catch(e){}
 }
 const webLinks = w => { const q = encodeURIComponent(w.word); return `<a class="btn small" href="https://www.google.com/search?q=${q}+meaning" target="_blank" rel="noopener">Search online</a><a class="btn small" href="https://www.google.com/search?tbm=isch&q=${q}" target="_blank" rel="noopener">Find pictures</a>${w.deck ? "" : `<a class="btn small" href="https://www.merriam-webster.com/dictionary/${q}" target="_blank" rel="noopener">Merriam-Webster</a>`}`; };
 const hearBtn = w => canSpeak || (w.d && w.d.a && !OFFLINE) ? `<button class="btn small" data-speak="${esc(w.word)}">Hear it</button>` : "";
@@ -5574,6 +5598,7 @@ function enterApp(){
     $("splash").hidden = true; $("wbg").hidden = true; document.body.classList.remove("leaving");
     const x = $("rain").getContext("2d"); x.clearRect(0, 0, rain.W, rain.H); setRain(false); setRain(document.body.classList.contains("home-on"));
     if (bqueue.length) setTimeout(() => showBadge(bqueue.shift(), true), 600);
+    musSync();
   };
   document.body.classList.remove("splash-on"); show(tab);   // the subjects appear underneath while the welcome screen dissolves
   if (calm()) done(); else { document.body.classList.add("leaving"); setTimeout(done, 900); }
@@ -5600,18 +5625,45 @@ function splashType(){
   setTimeout(step, 450);
 }
 
-/* Music: Urch's own track "Open Your Eyes", on the welcome screen and while choosing what to do */
-const MUSIC_FILE = "music-open-your-eyes.mp3", MUSIC_TABS = ["hub", "home", "settings"];
-const mus = {a:null, ok:false, loading:null, want:false, fadeT:null, ending:false};
-function musLoad(){
-  if (mus.loading) return mus.loading;
-  mus.loading = fetch(MUSIC_FILE).then(r => { if (!r.ok) throw 0; return r.blob(); }).then(b => {
-    const a = new Audio(URL.createObjectURL(b)); a.preload = "auto"; a.volume = 0; mus.a = a;
-    a.addEventListener("timeupdate", () => { if (!mus.ending && a.duration && a.duration - a.currentTime < 4){ mus.ending = true; musFade(0, 3500); } });
-    a.addEventListener("ended", () => { mus.ending = false; a.currentTime = 0; if (mus.want){ a.play().catch(() => {}); musFade(PREF.musicVol, 2500); } });
-    return a;
-  }).catch(() => { mus.loading = null; return null; });
-  return mus.loading;
+/* Music: Urch's own tracks. A random one starts on ENTER and the player bar at the bottom switches them.
+   Full volume while choosing what to do, half while working, off in Word Master so Socrates can be heard. */
+const TRACKS = [
+  {f:"music-open-your-eyes.mp3", t:"Open Your Eyes"},
+  {f:"music-ya-layli-ya-ayni.mp3", t:"Ya Layli, Ya Ayni"},
+  {f:"music-keep-one-small-part.mp3", t:"Keep One Small Part"},
+  {f:"music-riddle-of-learning.mp3", t:"The Riddle of Learning"},
+  {f:"music-riddle-of-learning-2.mp3", t:"The Riddle of Learning (II)"}
+];
+const MUSIC_LVL = {hub:1, home:1, settings:1, wm:0};   // every other screen: half
+const mus = {a:null, ok:false, i:-1, want:false, fadeT:null, ending:false, loading:false, tok:0, duck:1, duckT:null};
+function musLevel(){ if (!$("splash").hidden) return 1; const t = VIEWS.find(v => !$("view-" + v).hidden); return t in MUSIC_LVL ? MUSIC_LVL[t] : .5; }
+const musTarget = () => PREF.musicVol*musLevel()*mus.duck;
+function musPick(){   // a random track, never the one played last time
+  const n = TRACKS.length, last = PREF.musLast;
+  return n > 1 && last >= 0 && last < n ? (last + 1 + Math.floor(Math.random()*(n - 1))) % n : Math.floor(Math.random()*n);
+}
+function musNext(dir){
+  const n = TRACKS.length;
+  if (PREF.musShuf && dir > 0 && n > 1) return (mus.i + 1 + Math.floor(Math.random()*(n - 1))) % n;
+  return (mus.i + dir + n) % n;
+}
+async function musPlay(i){
+  const tok = ++mus.tok; mus.i = i; mus.loading = true; PREF.musLast = i; prefSave(); musBar();
+  if (mus.a && !mus.a.paused){ musFade(0, 400); await new Promise(r => setTimeout(r, 420)); }
+  let blob = null;
+  try { const r = await fetch(TRACKS[i].f); if (!r.ok) throw 0; blob = await r.blob(); } catch(e){}
+  if (tok !== mus.tok) return;
+  mus.loading = false;
+  if (!blob){ musBar(); return; }
+  if (mus.a){ mus.a.pause(); URL.revokeObjectURL(mus.a.src); }
+  const a = new Audio(URL.createObjectURL(blob)); a.volume = 0; mus.a = a; mus.ending = false;
+  a.addEventListener("timeupdate", () => {
+    if (a !== mus.a) return;
+    if (!mus.ending && a.duration && a.duration - a.currentTime < 3){ mus.ending = true; musFade(0, 2800); }
+    $("mb-pos").style.width = a.duration ? (100*a.currentTime/a.duration).toFixed(2) + "%" : "0";
+  });
+  a.addEventListener("ended", () => { if (a === mus.a) musPlay(musNext(1)); });
+  musSync();
 }
 function musFade(to, ms){
   const a = mus.a; if (!a) return; clearInterval(mus.fadeT);
@@ -5622,13 +5674,42 @@ function musFade(to, ms){
   }, 50);
 }
 function musSync(){
-  const here = !$("splash").hidden ? true : MUSIC_TABS.some(t => !$("view-" + t).hidden);
-  mus.want = PREF.music && mus.ok && here && !document.hidden;
-  if (mus.want) musLoad().then(a => { if (!a || !mus.want) return; if (a.paused) a.play().catch(() => {}); if (!mus.ending) musFade(PREF.musicVol, a.volume ? 600 : 2500); });
-  else if (mus.a && !mus.a.paused) musFade(0, 1200);
-  const b = $("mus-btn"); b.textContent = PREF.music && mus.ok ? "♪ Music on" : "♪ Music off"; b.setAttribute("aria-pressed", PREF.music && mus.ok);
+  mus.want = PREF.music && mus.ok && musLevel() > 0 && !document.hidden;
+  if (mus.want){
+    if (!mus.a){ if (!mus.loading) musPlay(mus.i < 0 ? musPick() : mus.i); }
+    else { if (mus.a.paused) mus.a.play().catch(() => {}); if (!mus.ending) musFade(musTarget(), mus.a.volume ? 700 : 2000); }
+  }
+  else if (mus.a && !mus.a.paused) musFade(0, 1000);
+  musBar();
 }
-$("mus-btn").onclick = () => { if (!mus.ok){ mus.ok = true; PREF.music = true; } else PREF.music = !PREF.music; prefSave(); musSync(); };
+function musBar(){
+  const on = PREF.music && mus.ok, b = $("mus-btn");
+  b.textContent = on ? "♪ Music on" : "♪ Music off"; b.setAttribute("aria-pressed", on);
+  const show = PREF.musBar && $("splash").hidden && musLevel() > 0;
+  $("mbar").hidden = !show; document.body.classList.toggle("mbar-on", show); if (!show) $("mb-list").hidden = true;
+  $("mb-play").textContent = on ? "❚❚" : "▶"; $("mb-play").setAttribute("aria-label", on ? "Pause music" : "Play music");
+  $("mb-name").textContent = mus.i >= 0 ? (mus.loading && on ? "Loading… " : "") + TRACKS[mus.i].t : "Music";
+  $("mb-shuf").classList.toggle("on", PREF.musShuf); $("mb-shuf").setAttribute("aria-pressed", PREF.musShuf);
+  $("mb-vol").value = PREF.musicVol;
+}
+function musDuck(){   // "Hear it": the music dips so the word can be heard
+  if (!mus.a || !mus.want) return;
+  mus.duck = .2; musFade(musTarget(), 250); clearTimeout(mus.duckT); mus.duckT = setTimeout(musUnduck, 8000);
+}
+function musUnduck(){ clearTimeout(mus.duckT); if (mus.duck === 1) return; mus.duck = 1; if (mus.a && mus.want) musFade(musTarget(), 900); }
+const musOn = () => { mus.ok = true; if (!PREF.music){ PREF.music = true; prefSave(); } };
+$("mus-btn").onclick = () => { if (!mus.ok) musOn(); else { PREF.music = !PREF.music; prefSave(); } musSync(); };
+$("mb-play").onclick = () => { if (PREF.music && mus.ok){ PREF.music = false; prefSave(); } else musOn(); musSync(); };
+$("mb-next").onclick = () => { musOn(); musPlay(musNext(1)); };
+$("mb-prev").onclick = () => { musOn(); if (mus.a && mus.a.currentTime > 5){ mus.a.currentTime = 0; mus.ending = false; musSync(); } else musPlay(musNext(-1)); };
+$("mb-shuf").onclick = () => { PREF.musShuf = !PREF.musShuf; prefSave(); musBar(); };
+$("mb-vol").oninput = e => { PREF.musicVol = +e.target.value; prefSave(); if (mus.a && mus.want) musFade(musTarget(), 200); };
+$("mb-name").onclick = () => {
+  const l = $("mb-list"); l.hidden = !l.hidden; $("mb-name").setAttribute("aria-expanded", !l.hidden);
+  if (!l.hidden) l.innerHTML = TRACKS.map((t, i) => `<button data-tr="${i}" class="${i === mus.i ? "on" : ""}">${i === mus.i ? "▶ " : ""}${esc(t.t)}</button>`).join("");
+};
+$("mb-list").onclick = e => { const b = e.target.closest("[data-tr]"); if (!b) return; $("mb-list").hidden = true; musOn(); musPlay(+b.dataset.tr); };
+document.addEventListener("click", e => { if (!$("mb-list").hidden && !e.target.closest("#mbar")) $("mb-list").hidden = true; });
 document.addEventListener("visibilitychange", musSync);
 
 /* Sound effects, made in the browser so there are no files to load */
@@ -6029,7 +6110,9 @@ function renderSettings(){
     ${chkH("watch", "Watch my rival's turns in Word Master")}`;
   const vs = (() => { try { return speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang)); } catch(e){ return []; } })();
   $("set-sound").innerHTML = `<h2>Sound and voice</h2>
-    ${chkH("music", "Music on the welcome screen and while choosing what to do")}
+    ${chkH("music", "Music (quieter while you practise, off in Word Master)")}
+    ${chkH("musBar", "Show the music player at the bottom")}
+    ${chkH("musShuf", "Shuffle the tracks")}
     ${rowH("Music volume", `<input type="range" min=".05" max="1" step=".05" value="${PREF.musicVol}" data-range="musicVol" aria-label="Music volume">`)}
     ${chkH("sound", "Sound effects")}
     ${rowH("Sound effects volume", `<input type="range" min=".2" max="1.5" step=".1" value="${PREF.vol}" data-range="vol" aria-label="Sound effects volume">`)}
@@ -6064,7 +6147,7 @@ $("view-settings").addEventListener("change", e => {
   const t = e.target;
   if (t.matches("input[type=checkbox][data-set]")) pset(t.dataset.set, t.checked);
   else if (t.matches("[data-hide]")){ const n = t.dataset.hide; PREF.hide = t.checked ? PREF.hide.filter(x => x !== n) : PREF.hide.concat(n); prefSave(); S.set = S.topic ? S.set : null; }
-  else if (t.matches("[data-range]")){ PREF[t.dataset.range] = +t.value; prefSave(); if (t.dataset.range === "vol") sfx("correct"); else if (t.dataset.range === "musicVol"){ if (mus.a && mus.want) musFade(PREF.musicVol, 300); } else tts("Hello."); }
+  else if (t.matches("[data-range]")){ PREF[t.dataset.range] = +t.value; prefSave(); if (t.dataset.range === "vol") sfx("correct"); else if (t.dataset.range === "musicVol"){ musBar(); if (mus.a && mus.want) musFade(musTarget(), 300); } else tts("Hello."); }
   else if (t.matches("[data-sel]")){ PREF[t.dataset.sel] = t.value; prefSave(); tts("Hello."); }
 });
 applyPrefs();
