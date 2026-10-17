@@ -3503,8 +3503,8 @@ const WM_POSE = ["idle", "right", "wrong", "sweat", "angry", "excited", "win", "
 const WM_QM = ["base", "ask", "correct", "no", "curious", "applaud", "point", "trophy", "sigh"];
 const wm = {topic:"", opp:"hypatia", watch:true, voice:true, g:null, loaded:false, tick:null, last:0};
 try { const v = JSON.parse(localStorage.getItem("wt-wm") || "{}"); wm.topic = v.topic || ""; wm.opp = WM_OPP.some(o => o.id === v.opp) ? v.opp : "hypatia"; wm.watch = v.watch !== false; wm.voice = v.voice !== false; } catch(e){}
-try { const v = JSON.parse(localStorage.getItem("wt-wm-vox") || "{}"); wm.vname = v.name || ""; wm.rate = +v.rate || 1; wm.pitch = +v.pitch || .9; } catch(e){ wm.rate = 1; wm.pitch = .9; }
-const wmVoxSave = () => { try { localStorage.setItem("wt-wm-vox", JSON.stringify({name:wm.vname, rate:wm.rate, pitch:wm.pitch})); } catch(e){} };
+try { const v = JSON.parse(localStorage.getItem("wt-wm-vox") || "{}"); wm.vname = v.name || ""; wm.rate = +v.rate || 1; wm.pitch = +v.pitch || .9; wm.piper = v.piper !== false; } catch(e){ wm.rate = 1; wm.pitch = .9; wm.piper = true; }
+const wmVoxSave = () => { try { localStorage.setItem("wt-wm-vox", JSON.stringify({name:wm.vname, rate:wm.rate, pitch:wm.pitch, piper:wm.piper})); } catch(e){} };
 const wmPrefs = () => { try { localStorage.setItem("wt-wm", JSON.stringify({topic:wm.topic, opp:wm.opp, watch:wm.watch, voice:wm.voice})); } catch(e){} };
 const wmS = () => { S.wm = S.wm || {games:[], champ:{}, miss:{}}; return S.wm; };
 const wmImg = (who, pose) => "wm-" + who + "-" + pose + ".webp";
@@ -3537,34 +3537,114 @@ function wmWrongGuess(w){
 const wmVoices = () => { try { return speechSynthesis.getVoices(); } catch(e){ return []; } };
 function wmRank(v){ let s = 0; if (/en[-_]GB/i.test(v.lang)) s += 30; else if (/^en/i.test(v.lang)) s += 10; if (/natural|online|neural/i.test(v.name)) s += 40; if (/google uk english male/i.test(v.name)) s += 35; if (/ryan|thomas|george|daniel|arthur|oliver|male/i.test(v.name)) s += 12; if (/google/i.test(v.name)) s += 8; return s; }
 function wmPickVoice(){ const vs = wmVoices(); return vs.find(v => v.name === wm.vname) || vs.slice().sort((a, b) => wmRank(b) - wmRank(a))[0] || null; }
-function wmSay(t, force){
-  if ((!wm.voice && !force) || !("speechSynthesis" in window) || !t || (wm.g && wm.g.skip)) return;
+/* Socrates' studio voice: Piper "alan" running on this device (the vox-* files, free, and offline once downloaded).
+   Until it has downloaded, or where it can't run (like the Claude version), the browser voice speaks instead. */
+const vox = {w:null, state:"", p:0, ctx:null, srcs:[], at:0, want:"", wantT:"", live:"", n:0, memo:new Map(), pend:new Map()};
+const voxPb = () => .92*(wm.pitch || .9)/.9;   // played a little slower than made, which deepens the voice
+const voxLen = () => +(1.08/(wm.rate || 1)*voxPb()/.92).toFixed(3);
+const voxKey = t => voxLen() + "|" + t;
+const voxOn = () => wm.piper && vox.state !== "none";
+function voxLoad(){
+  if (vox.w || vox.state === "none") return;
+  try { vox.w = new Worker("vox-worker.js", {type:"module"}); } catch(e){ vox.state = "none"; return; }
+  vox.state = "loading"; try { navigator.storage.persist().catch(() => {}); } catch(e){}
+  vox.w.onerror = voxFail;
+  vox.w.onmessage = e => {
+    const m = e.data;
+    if (m.type === "progress"){ vox.p = m.p; voxStatus(); }
+    else if (m.type === "ready"){ vox.state = "ready"; voxStatus(); }
+    else if (m.type === "fail") voxFail();
+    else if (m.type === "part") voxPart(m);
+  };
+  vox.w.postMessage({type:"load"});
+}
+function voxFail(){ vox.state = "none"; try { vox.w.terminate(); } catch(e){} vox.w = null; vox.pend.clear(); voxStatus(); if (vox.want){ const t = vox.wantT; vox.want = ""; wmSayBrowser(t); } }
+function voxPart(m){
+  vox.live = m.last ? "" : m.key;
+  if (!m.pcm){
+    vox.pend.delete(m.key);
+    if (m.key === vox.want){ vox.want = ""; if (!m.cut) wmSayBrowser(vox.wantT); }
+    return;
+  }
+  let p = vox.pend.get(m.key); if (!p || m.first) vox.pend.set(m.key, p = []);
+  p.push(m.pcm);
+  if (m.key === vox.want) voxPlay(m.pcm, m.rate);
+  if (m.last){
+    vox.pend.delete(m.key); if (m.key === vox.want) vox.want = "";
+    const all = new Float32Array(p.reduce((a, x) => a + x.length, 0)); let at = 0;
+    for (const x of p){ all.set(x, at); at += x.length; }
+    vox.memo.set(m.key, {pcm:all, rate:m.rate}); if (vox.memo.size > 40) vox.memo.delete(vox.memo.keys().next().value);
+  }
+}
+function voxPlay(pcm, rate){
+  if (!pcm.length) return;
+  try {
+    const c = vox.ctx = vox.ctx || new (window.AudioContext || window.webkitAudioContext)(); if (c.state === "suspended") c.resume();
+    const b = c.createBuffer(1, pcm.length, rate); b.getChannelData(0).set(pcm);
+    const s = c.createBufferSource(), pb = voxPb(); s.buffer = b; s.playbackRate.value = pb; s.connect(c.destination);
+    const at = Math.max(c.currentTime + .03, vox.at); s.start(at); vox.at = at + b.duration/pb;
+    vox.srcs.push(s); s.onended = () => { vox.srcs = vox.srcs.filter(x => x !== s); };
+  } catch(e){}
+}
+function voxStop(){
+  vox.want = ""; vox.at = 0; vox.srcs.forEach(s => { try { s.stop(); } catch(e){} }); vox.srcs = [];
+  if (vox.w) vox.w.postMessage({type:"drop"});
+}
+function voxSay(t){
+  const k = voxKey(t), hit = vox.memo.get(k);
+  if (hit){ voxPlay(hit.pcm, hit.rate); return; }
+  vox.want = k; vox.wantT = t;
+  if (vox.live === k) (vox.pend.get(k) || []).forEach(p => voxPlay(p, 22050)); else vox.pend.delete(k);
+  vox.w.postMessage({type:"say", id:++vox.n, text:t, len:voxLen()});
+}
+function voxPrep(t){
+  if (!wm.voice || !voxOn() || !vox.w || !t) return;
+  t = t.replace(/_{3,}/g, "blank"); const k = voxKey(t);
+  if (!vox.memo.has(k) && !vox.pend.has(k)) vox.w.postMessage({type:"prep", text:t, len:voxLen()});
+}
+function voxStatus(){
+  const el = $("wm-voxst"); if (!el) return;
+  if (vox.state === "none" && !vox.p && $("wm-vsel") && $("wm-vsel").querySelector('[value="__piper"]')) return wmVoxUI();   // not on this site: take it off the list
+  if (!wm.piper || (vox.state === "none" && !vox.p)) return;
+  el.textContent = vox.state === "ready" ? "Studio voice (Alan)" : vox.state === "none" ? "Studio voice couldn't finish downloading, so the browser voice is speaking. It will try again next time." : "Studio voice (Alan) downloading " + Math.round(vox.p*100) + "%. The browser voice speaks until it's ready.";
+}
+
+function wmSayBrowser(t){
+  if (!("speechSynthesis" in window) || !t) return;
   try {
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(t.replace(/_{3,}/g, "blank")), v = wmPickVoice();
+    const u = new SpeechSynthesisUtterance(t), v = wmPickVoice();
     if (v){ u.voice = v; u.lang = v.lang; } else u.lang = "en-GB";
     u.rate = wm.rate || 1; u.pitch = wm.pitch || .9; speechSynthesis.speak(u);
   } catch(e){}
 }
+function wmSay(t, force){
+  if ((!wm.voice && !force) || !t || (wm.g && wm.g.skip)) return;
+  wmHush(); t = t.replace(/_{3,}/g, "blank");
+  if (voxOn() && vox.state === "ready") voxSay(t); else wmSayBrowser(t);
+}
 function wmVoxUI(){
   const box = $("wm-vox"); if (!box) return;
+  if (wm.piper) voxLoad();
   const vs = wmVoices(), cur = wmPickVoice(), en = vs.filter(v => /^en/i.test(v.lang)).sort((a, b) => wmRank(b) - wmRank(a)), other = vs.filter(v => !/^en/i.test(v.lang));
-  const opt = v => `<option value="${esc(v.name)}" ${cur && v.name === cur.name ? "selected" : ""}>${esc(v.name)} (${esc(v.lang)})</option>`;
-  box.innerHTML = `<summary>🔊 Socrates' voice: <b>${cur ? esc(cur.name) : "not available on this device"}</b></summary>
-    ${vs.length ? `<label class="wm-lab">Voice <select id="wm-vsel">${en.map(opt).join("")}${other.length ? `<optgroup label="Other languages">${other.map(opt).join("")}</optgroup>` : ""}</select></label>
+  const studio = vox.state !== "none" || vox.p, pip = studio && wm.piper;
+  const opt = v => `<option value="${esc(v.name)}" ${!pip && cur && v.name === cur.name ? "selected" : ""}>${esc(v.name)} (${esc(v.lang)})</option>`;
+  box.innerHTML = `<summary>🔊 Socrates' voice: <b id="wm-voxst">${pip ? "Studio voice (Alan)" : cur ? esc(cur.name) : "not available on this device"}</b></summary>
+    ${studio || vs.length ? `<label class="wm-lab">Voice <select id="wm-vsel">${studio ? `<option value="__piper" ${pip ? "selected" : ""}>Studio voice: Alan</option>` : ""}${en.length ? `<optgroup label="Voices built into this browser">${en.map(opt).join("")}</optgroup>` : ""}${other.length ? `<optgroup label="Other languages">${other.map(opt).join("")}</optgroup>` : ""}</select></label>
     <div class="wm-sl"><label class="wm-lab">Speed <input type="range" id="wm-rate" min=".7" max="1.4" step=".05" value="${wm.rate}"></label><label class="wm-lab">Pitch <input type="range" id="wm-pitch" min=".5" max="1.5" step=".05" value="${wm.pitch}"></label></div>
     <div class="row"><button class="btn small" id="wm-vtest">▶ Preview</button><button class="btn small" id="wm-vreset">Reset to best</button></div>
-    <p class="wm-rules">The list shows the voices built into this browser, so it's different on each device and each device remembers its own choice. In Chrome, try <b>Google UK English Male</b>.</p>` : `<p class="wm-rules">This browser hasn't offered any voices yet. Try again in a moment.</p>`}`;
-  if (!vs.length) return;
+    <p class="wm-rules">${studio ? "The studio voice is about 76 MB. It downloads once, the first time you open Word Master, then works offline. Until then the browser voice speaks. " : ""}The browser voices are different on each device and each device remembers its own choice. In Chrome, try <b>Google UK English Male</b>.</p>` : `<p class="wm-rules">This browser hasn't offered any voices yet. Try again in a moment.</p>`}`;
+  voxStatus();
+  if (!studio && !vs.length) return;
   const prev = () => wmSay("Welcome to Word Master. Which word means the open public square of an ancient Greek city?", true);
-  $("wm-vsel").onchange = e => { wm.vname = e.target.value; wmVoxSave(); wmVoxUI(); $("wm-vox").open = true; prev(); };
+  $("wm-vsel").onchange = e => { const p = e.target.value === "__piper"; wm.piper = p; if (!p) wm.vname = e.target.value; wmVoxSave(); wmVoxUI(); $("wm-vox").open = true; prev(); };
   $("wm-rate").onchange = e => { wm.rate = +e.target.value; wmVoxSave(); prev(); };
   $("wm-pitch").onchange = e => { wm.pitch = +e.target.value; wmVoxSave(); prev(); };
   $("wm-vtest").onclick = prev;
-  $("wm-vreset").onclick = () => { wm.vname = ""; wm.rate = 1; wm.pitch = .9; wmVoxSave(); wmVoxUI(); $("wm-vox").open = true; prev(); };
+  $("wm-vreset").onclick = () => { wm.vname = ""; wm.piper = true; wm.rate = 1; wm.pitch = .9; wmVoxSave(); wmVoxUI(); $("wm-vox").open = true; prev(); };
 }
 try { speechSynthesis.addEventListener("voiceschanged", () => { const b = $("wm-vox"); if (b && !b.open) wmVoxUI(); }); } catch(e){}
-const wmHush = () => { try { speechSynthesis.cancel(); } catch(e){} };
+const wmHush = () => { try { speechSynthesis.cancel(); } catch(e){} voxStop(); };
 function wmVoiceBtn(){ $("wm-voice").textContent = wm.voice ? "Voice on" : "Voice off"; $("wm-voice").setAttribute("aria-pressed", wm.voice); }
 $("wm-voice").onclick = () => { wm.voice = !wm.voice; wmPrefs(); wmVoiceBtn(); if (!wm.voice) wmHush(); };
 wmVoiceBtn();
@@ -3660,7 +3740,7 @@ function wmNextTurn(){
   }
   const subj = r === 0 ? "Specialist subject: " + g.topic : r === 1 ? "General knowledge" : "The final: " + g.final[who].length + " missed word" + (g.final[who].length === 1 ? "" : "s");
   const line = (r === 0 ? "Round one. " : r === 1 ? "Round two. " : "The final. ") + (who === "you" ? "Please take the black chair." : g.opp.name + ", please take the black chair.");
-  wmQM("point", line, 0); wmSay(line + (r === 0 ? " Your specialist subject is " + g.topic + "." : ""));
+  wmQM("point", line, 0); wmSay(line + (r === 0 ? " Your specialist subject is " + g.topic + "." : "")); wmPrepNext(who);
   if (who === "opp"){
     wmUi(`<div class="wm-msg"><p class="wm-kick">Round ${r + 1} · ${esc(subj)}</p><h3 class="wm-h">${esc(g.opp.name)} takes the black chair</h3><div class="row"><button class="btn" id="wm-skip">Skip to ${esc(g.opp.name)}'s score</button></div></div>`);
     $("wm-skip").onclick = () => { g.skip = true; wmHush(); };
@@ -3672,14 +3752,19 @@ function wmNextTurn(){
     $("wm-ready").onclick = () => { wmLight(true); wmYouAsk(); }; $("wm-ready").focus();
   }
 }
-function wmNextQ(who){
+function wmQList(who){
   const g = wm.g, k = g.round + who;
   if (!g.qs[k]){
     if (g.round === 2) g.qs[k] = {list:shuffle(g.final[who].map(byKey).filter(Boolean)), pool:null};
     else { const pool = wmPool(g.round === 0 ? g.topic : ""), fresh = pool.filter(w => !g.used.has(key(w))); g.qs[k] = {list:shuffle(fresh.length ? fresh : pool), pool}; }
   }
-  const q = g.qs[k]; if (!q.list.length){ if (!q.pool) return null; q.list = shuffle(q.pool); }
-  const w = q.list.shift(); g.used.add(key(w)); return w;
+  return g.qs[k];
+}
+// get Socrates' next question ready while this one is being answered
+const wmPrepNext = who => { const n = wmQList(who).list[0]; if (n && !((wm.g.skip || !wm.watch) && who === "opp")) voxPrep(wmClue(n)); };
+function wmNextQ(who){
+  const g = wm.g, q = wmQList(who); if (!q.list.length){ if (!q.pool) return null; q.list = shuffle(q.pool); }
+  const w = q.list.shift(); g.used.add(key(w)); wmPrepNext(who); return w;
 }
 function wmYouAsk(){
   const g = wm.g; if (!g || g.dead) return;

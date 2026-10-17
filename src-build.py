@@ -36,11 +36,12 @@ except Exception: VER=33
 core=["./","index.html","manifest.webmanifest","icon-192.png","icon-512.png"]
 sw='''/* Keeps the app and its recordings and pictures on the device so it works offline. */
 const CACHE = "word-trainer-v%d";
+const VOX = "word-trainer-voice-1";  /* Socrates' studio voice (vox-*): kept between app updates so it only downloads once. Change the number after rebuilding it with src-voice.py. */
 const CORE = %s;
 const MEDIA = %s;
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE.map(u => new Request(u, {cache:"reload"})))).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE && k !== VOX).map(k => caches.delete(k)))).then(() => self.clients.claim()));
   caches.open(CACHE).then(async c => { for (const m of MEDIA){ try { if (!(await c.match(m))) await c.add(m); } catch(err){} } });
 });
 self.addEventListener("fetch", e => {
@@ -50,6 +51,10 @@ self.addEventListener("fetch", e => {
     e.respondWith(fetch(new Request(r.url, {cache:"no-cache"}))
       .then(res => { if (!res || !res.ok) throw 0; const c = res.clone(); caches.open(CACHE).then(x => x.put("index.html", c)).catch(() => {}); return res.redirected ? new Response(res.body, {status:res.status, statusText:res.statusText, headers:res.headers}) : res; })
       .catch(() => caches.match("index.html").then(h => h || caches.match("./")).then(h => h || fetch(r))));
+    return;
+  }
+  if (/\\/vox-(?!worker)[^/]+$/.test(new URL(r.url).pathname)){
+    e.respondWith(caches.open(VOX).then(c => c.match(r, {ignoreSearch:true}).then(hit => hit || fetch(r).then(res => { if (res && res.ok) c.put(r, res.clone()).catch(() => {}); return res; }))).catch(() => fetch(r)));
     return;
   }
   e.respondWith(caches.match(r, {ignoreSearch:true}).then(hit => hit || fetch(r).then(res => { if (res && res.ok){ const c = res.clone(); caches.open(CACHE).then(x => x.put(r, c)).catch(() => {}); } return res; })).catch(() => fetch(r)));
