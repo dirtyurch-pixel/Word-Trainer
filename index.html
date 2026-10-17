@@ -3501,7 +3501,10 @@ const WM_OPP = [
   {id:"hypatia", name:"Hypatia", lvl:"Medium", blurb:"Mathematician of Alexandria. Sharp and competitive.", skill:.7, pass:.3, speed:1.05},
   {id:"aristotle", name:"Aristotle", lvl:"Hard", blurb:"The reigning champion. Calm, proud and rarely wrong.", skill:.85, pass:.18, speed:.95},
   // specialists: hi = skill on their own subjects (and a little quicker there), lo = on their weak subjects, skill = everything else
-  {id:"herodotus", name:"Herodotus", lvl:"Specialist", blurb:"The father of history and a great traveller. Brilliant on his subjects, shaky outside them.", skill:.62, pass:.28, speed:1, spec:["Ancient Greece", "Land and sea"], weak:["Science and maths"], hi:.9, lo:.4}];
+  {id:"herodotus", name:"Herodotus", lvl:"Specialist", blurb:"The father of history and a great traveller. Brilliant on his subjects, shaky outside them.", skill:.62, pass:.28, speed:1, spec:["Ancient Greece", "Land and sea"], weak:["Science and maths"], hi:.9, lo:.4},
+  {id:"ibnkhaldun", name:"Ibn Khaldun", lvl:"Specialist", blurb:"The great historian of North Africa. Thoughtful, serious and quietly confident.", skill:.6, pass:.3, speed:1.05, spec:["Arab history", "Worship and ritual"], weak:["Music, poetry and drama"], hi:.88, lo:.4},
+  {id:"dee", name:"John Dee", lvl:"Specialist", blurb:"Elizabethan mathematician and magician. Uncanny on the occult, lost in the garden.", skill:.6, pass:.25, speed:.95, spec:["Witchcraft and the occult", "Symbolism"], weak:["Plants and animals"], hi:.9, lo:.38},
+  {id:"galen", name:"Galen", lvl:"Specialist", blurb:"The great physician of Pergamon. Precise, brisk and a bit of a know-it-all.", skill:.64, pass:.22, speed:1, spec:["Body and medicine", "Plants and animals"], weak:["Witchcraft and the occult"], hi:.9, lo:.42}];
 const wmSpec = (o, t) => !!(o.spec && o.spec.includes(t));
 const wmSkill = (o, w) => wmSpec(o, w.topic) ? o.hi : o.weak && o.weak.includes(w.topic) ? o.lo : o.skill;
 const WM_ROUNDS = [{n:"Specialist subject", s:120}, {n:"General knowledge", s:120}, {n:"The final", s:60}];
