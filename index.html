@@ -269,14 +269,39 @@ body.calm *,body.calm *::before,body.calm *::after{animation:none!important;tran
 .set-row .pseg{justify-content:flex-start}
 #set-learn{order:1!important}#set-cards{order:2!important}#set-games{order:3!important}#view-settings #goal-card{order:4!important}#set-sound{order:5!important}#set-display{order:6!important}#set-data{order:7!important}#view-settings #backup-card{order:8!important}#view-settings #sync-card{order:9!important}#view-settings #ai-card{order:10!important}
 /* Welcome screen */
-#splash{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:24px 16px;background:transparent}
+#splash{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;gap:10px;padding:max(6vh,24px) 16px 24px;background:transparent;transition:opacity .9s ease}
 #splash[hidden]{display:none}
 body.splash-on .wrap{visibility:hidden}
-.wsmall{font-family:var(--display);color:var(--accent);font-size:clamp(1.2rem,4vw,1.8rem);letter-spacing:.3em;margin:0;text-shadow:0 0 12px var(--glow)}
-.wto{font-family:var(--mono);color:var(--muted);margin:0;font-size:1.1rem}
-.wbig{font-family:var(--display);font-weight:800;color:var(--accent);font-size:clamp(2.4rem,10vw,5.5rem);line-height:1.05;margin:0;letter-spacing:.06em;text-shadow:0 0 18px var(--glow),0 0 2px #fff}
-.enter{margin-top:22px;font-family:var(--mono);font-size:1.25rem;letter-spacing:.35em;color:var(--accent);background:rgba(0,0,0,.65);border:2px solid var(--accent);padding:14px 36px 14px 44px;cursor:pointer;box-shadow:0 0 18px var(--glow),inset 0 0 12px rgba(43,255,136,.15)}
+#wbg{position:fixed;inset:0;z-index:0;overflow:hidden;background:#000;pointer-events:none;transition:opacity .9s ease}
+#wbg[hidden]{display:none}
+#wbg .wpic{position:absolute;inset:0;background:url(welcome-wide.webp) center 70%/cover no-repeat;animation:wzoom 40s ease-in-out infinite alternate;transform-origin:50% 80%}
+#wbg .wglow{position:absolute;left:50%;top:84%;width:46vmax;height:30vmax;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(120,255,150,.45),rgba(43,255,136,.12) 55%,transparent);mix-blend-mode:screen;animation:wpulse 3.2s ease-in-out infinite}
+#wbg::before{content:"";position:absolute;inset:0;z-index:1;background:radial-gradient(ellipse 60% 34% at 50% 20%,rgba(0,0,0,.55),transparent 75%)}
+@media (max-aspect-ratio:1/1){
+  #wbg .wpic{background-image:url(welcome-tall.webp);background-position:center 55%}
+  #wbg .wglow{top:76%;left:55%;width:80vmin;height:50vmin}
+  #wbg::after{content:"";position:absolute;left:0;right:0;bottom:0;height:24%;z-index:1;background:linear-gradient(transparent,#000 85%)}
+}
+@keyframes wzoom{from{transform:scale(1)}to{transform:scale(1.07)}}
+@keyframes wpulse{0%,100%{opacity:.55}50%{opacity:1}}
+body.leaving #splash,body.leaving #wbg{opacity:0}
+.wsmall{font-family:var(--display);color:var(--accent);font-size:clamp(1.1rem,3.4vw,1.7rem);letter-spacing:.3em;margin:0;text-shadow:0 0 12px var(--glow),0 0 3px #000;min-height:1.3em}
+.wbig{font-family:var(--display);font-weight:800;color:var(--accent);font-size:clamp(2.3rem,9vw,5.5rem);line-height:1.05;margin:0;letter-spacing:.06em;text-shadow:0 0 18px var(--glow),0 0 2px #fff,0 0 4px #000;min-height:1.05em}
+.wbig.done{animation:wtitle 4s ease-in-out infinite}
+@keyframes wtitle{0%,100%{text-shadow:0 0 18px var(--glow),0 0 2px #fff,0 0 4px #000}50%{text-shadow:0 0 34px var(--glow),0 0 70px rgba(43,255,136,.5),0 0 2px #fff}}
+.wcar{display:inline-block;width:.08em;margin-left:.06em;background:var(--accent);animation:wblink .8s steps(1) infinite;vertical-align:-.05em;height:.9em}
+@keyframes wblink{50%{opacity:0}}
+.enter{margin-top:18px;font-family:var(--mono);font-size:1.25rem;letter-spacing:.35em;color:var(--accent);background:rgba(0,0,0,.65);border:2px solid var(--accent);padding:14px 36px 14px 44px;cursor:pointer;box-shadow:0 0 18px var(--glow),inset 0 0 12px rgba(43,255,136,.15);animation:wenter 2.4s ease-in-out infinite;transition:opacity .8s}
+@keyframes wenter{0%,100%{box-shadow:0 0 14px var(--glow),inset 0 0 12px rgba(43,255,136,.15);transform:scale(1)}50%{box-shadow:0 0 34px var(--glow),0 0 60px rgba(43,255,136,.35),inset 0 0 16px rgba(43,255,136,.3);transform:scale(1.04)}}
 .enter:hover,.enter:focus-visible{background:var(--accent);color:#000;outline:none}
+.wkey{font-family:var(--mono);color:var(--muted);font-size:.95rem;letter-spacing:.2em;margin:4px 0 0;text-shadow:0 0 4px #000;display:none}
+@media (hover:hover) and (pointer:fine){.wkey{display:block}}
+.wpre .enter,.wpre .wkey{opacity:0}
+#mus-btn{position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;z-index:31;font-family:var(--mono);font-size:.95rem;color:var(--accent);background:rgba(0,0,0,.6);border:1px solid var(--accent);padding:8px 12px;cursor:pointer;box-shadow:0 0 10px var(--glow)}
+#mus-btn:hover,#mus-btn:focus-visible{background:var(--accent);color:#000;outline:none}
+body:not(.splash-on) #mus-btn{display:none}
+body.calm #wbg .wpic,body.calm #wbg .wglow,body.calm .wbig.done,body.calm .enter{animation:none}
+@media (prefers-reduced-motion:reduce){#wbg .wpic,#wbg .wglow,.wbig.done,.enter{animation:none}}
 /* Subject panels */
 .ptitle{font-family:var(--display);color:var(--accent);font-size:clamp(1.3rem,4vw,2rem);letter-spacing:.06em;margin:0;text-shadow:0 0 12px var(--glow)}
 .panels{display:flex;gap:16px;overflow-x:auto;padding:8px 10px 20px;scroll-snap-type:x mandatory;scrollbar-color:var(--line) transparent}
@@ -689,13 +714,15 @@ body.splash-on .wrap{visibility:hidden}
 @media (prefers-reduced-motion:reduce){.panel{transition:none}}
 </style>
 
+<div id="wbg" aria-hidden="true"><div class="wpic"></div><div class="wglow"></div></div>
 <canvas id="rain" aria-hidden="true"></canvas>
-<section id="splash" aria-label="Welcome">
-  <p class="wsmall">Welcome</p>
-  <p class="wto">to</p>
-  <p class="wbig">Word Trainer</p>
+<section id="splash" class="wpre" aria-label="Welcome to Word Trainer">
+  <p class="wsmall" id="w-small" aria-hidden="true"></p>
+  <p class="wbig" id="w-big" aria-hidden="true"></p>
   <button class="enter" id="enter-btn">ENTER</button>
+  <p class="wkey">or press any key</p>
 </section>
+<button id="mus-btn" aria-pressed="false">♪ Music off</button>
 <div class="wrap" id="app">
   <header>
     <h1><button class="homelink" id="home-link">Word Meaning Trainer</button></h1>
@@ -3697,7 +3724,7 @@ function save(){
 }
 
 /* Settings tab: this device's preferences, kept apart from progress (S) */
-const PREF_DEF = {setSize:4, need:2, hints:true, hide:[], fcTestN:20, fcFlip:false, spSecs:60, wmShort:false, vol:1, hearVoice:"", hearRate:.85, text:1, motion:false, rain:"on", pops:true};
+const PREF_DEF = {setSize:4, need:2, hints:true, hide:[], fcTestN:20, fcFlip:false, spSecs:60, wmShort:false, vol:1, hearVoice:"", hearRate:.85, text:1, motion:false, rain:"on", pops:true, music:true, musicVol:.5};
 const PREF = Object.assign({}, PREF_DEF);
 try { const p = JSON.parse(localStorage.getItem("wt-settings") || "{}"); for (const k in PREF_DEF) if (k in p && typeof p[k] === typeof PREF_DEF[k]) PREF[k] = p[k]; } catch(e){}
 const prefSave = () => { try { localStorage.setItem("wt-settings", JSON.stringify(PREF)); } catch(e){} };
@@ -4767,6 +4794,7 @@ function show(tab){
   if (tab === "home") renderHome();
   if (tab === "grade"){ renderProg(); renderCatGrades(); }
   if (tab === "cards") cardsOpen();
+  if (typeof mus === "object") musSync();
   scrollTo({top:0});
 }
 for (const t of VIEWS) if ($("tab-"+t)) $("tab-"+t).onclick = () => show(t);
@@ -5524,7 +5552,9 @@ function rainSize(){
 function rainWord(){ if (!rain.words.length) rain.words = allWords().filter(w => !w.deck && /^[A-Za-z' -]{3,16}$/.test(w.word)).map(w => w.word); return rain.words[Math.floor(Math.random()*rain.words.length)] || "word"; }
 function rainFrame(){
   if (!rain.on) return;
-  const x = $("rain").getContext("2d"); x.fillStyle = "rgba(0,0,0,.18)"; x.fillRect(0, 0, rain.W, rain.H);
+  const x = $("rain").getContext("2d");
+  if (document.body.classList.contains("splash-on")){ x.globalCompositeOperation = "destination-out"; x.fillStyle = "rgba(0,0,0,.18)"; x.fillRect(0, 0, rain.W, rain.H); x.globalCompositeOperation = "source-over"; }
+  else { x.fillStyle = "rgba(0,0,0,.18)"; x.fillRect(0, 0, rain.W, rain.H); }
   x.font = rain.fs + "px 'Share Tech Mono', monospace"; x.fillStyle = "rgba(43,255,136,.3)";
   for (const c of rain.cols){ x.fillText(c.w, c.x, c.y); c.y += c.v*1.4; if (c.y > rain.H + rain.fs){ c.y = -Math.random()*rain.H*.4; c.x = Math.random()*(rain.W - rain.fs*6); c.w = rainWord(); } }
   requestAnimationFrame(rainFrame);
@@ -5536,7 +5566,70 @@ function setRain(on){
   if (!on) rain.on = false;
 }
 addEventListener("resize", () => { if (document.body.classList.contains("rainy")) rainSize(); });
-$("enter-btn").onclick = () => { $("splash").hidden = true; document.body.classList.remove("splash-on"); sfx("flip"); show(VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "hub"); if (bqueue.length) setTimeout(() => showBadge(bqueue.shift(), true), 600); };
+function enterApp(){
+  if ($("splash").hidden || document.body.classList.contains("leaving")) return;
+  mus.ok = true; sfx("flip");
+  const tab = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "hub";
+  const done = () => {
+    $("splash").hidden = true; $("wbg").hidden = true; document.body.classList.remove("leaving");
+    const x = $("rain").getContext("2d"); x.clearRect(0, 0, rain.W, rain.H); setRain(false); setRain(document.body.classList.contains("home-on"));
+    if (bqueue.length) setTimeout(() => showBadge(bqueue.shift(), true), 600);
+  };
+  document.body.classList.remove("splash-on"); show(tab);   // the subjects appear underneath while the welcome screen dissolves
+  if (calm()) done(); else { document.body.classList.add("leaving"); setTimeout(done, 900); }
+}
+$("enter-btn").onclick = enterApp;
+document.addEventListener("keydown", e => {
+  if ($("splash").hidden || e.ctrlKey || e.metaKey || e.altKey || /^(Tab|Shift|Control|Alt|Meta|CapsLock|F\d+)$/.test(e.key)) return;
+  if (e.target.closest && e.target.closest("button") && (e.key === "Enter" || e.key === " ")) return;   // the focused button handles these itself
+  e.preventDefault(); enterApp();
+});
+/* The title types itself on, then glows */
+function splashType(){
+  const sm = "Welcome to", big = "Word Trainer", a = $("w-small"), b = $("w-big");
+  if (calm()){ a.textContent = sm; b.textContent = big; b.classList.add("done"); $("splash").classList.remove("wpre"); return; }
+  let i = 0;
+  const car = '<span class="wcar"></span>';
+  const step = () => {
+    if ($("splash").hidden) return;
+    i++;
+    if (i <= sm.length){ a.innerHTML = esc(sm.slice(0, i)) + car; setTimeout(step, 70); }
+    else if (i <= sm.length + big.length){ a.textContent = sm; b.innerHTML = esc(big.slice(0, i - sm.length)) + car; setTimeout(step, i === sm.length + 1 ? 380 : 95); }
+    else { b.textContent = big; b.classList.add("done"); $("splash").classList.remove("wpre"); }
+  };
+  setTimeout(step, 450);
+}
+
+/* Music: Urch's own track "Open Your Eyes", on the welcome screen and while choosing what to do */
+const MUSIC_FILE = "music-open-your-eyes.mp3", MUSIC_TABS = ["hub", "home", "settings"];
+const mus = {a:null, ok:false, loading:null, want:false, fadeT:null, ending:false};
+function musLoad(){
+  if (mus.loading) return mus.loading;
+  mus.loading = fetch(MUSIC_FILE).then(r => { if (!r.ok) throw 0; return r.blob(); }).then(b => {
+    const a = new Audio(URL.createObjectURL(b)); a.preload = "auto"; a.volume = 0; mus.a = a;
+    a.addEventListener("timeupdate", () => { if (!mus.ending && a.duration && a.duration - a.currentTime < 4){ mus.ending = true; musFade(0, 3500); } });
+    a.addEventListener("ended", () => { mus.ending = false; a.currentTime = 0; if (mus.want){ a.play().catch(() => {}); musFade(PREF.musicVol, 2500); } });
+    return a;
+  }).catch(() => { mus.loading = null; return null; });
+  return mus.loading;
+}
+function musFade(to, ms){
+  const a = mus.a; if (!a) return; clearInterval(mus.fadeT);
+  const from = a.volume, t0 = performance.now();
+  mus.fadeT = setInterval(() => {
+    const k = Math.min(1, (performance.now() - t0)/ms); a.volume = Math.max(0, Math.min(1, from + (to - from)*k));
+    if (k >= 1){ clearInterval(mus.fadeT); if (to === 0 && !mus.want) a.pause(); }
+  }, 50);
+}
+function musSync(){
+  const here = !$("splash").hidden ? true : MUSIC_TABS.some(t => !$("view-" + t).hidden);
+  mus.want = PREF.music && mus.ok && here && !document.hidden;
+  if (mus.want) musLoad().then(a => { if (!a || !mus.want) return; if (a.paused) a.play().catch(() => {}); if (!mus.ending) musFade(PREF.musicVol, a.volume ? 600 : 2500); });
+  else if (mus.a && !mus.a.paused) musFade(0, 1200);
+  const b = $("mus-btn"); b.textContent = PREF.music && mus.ok ? "♪ Music on" : "♪ Music off"; b.setAttribute("aria-pressed", PREF.music && mus.ok);
+}
+$("mus-btn").onclick = () => { if (!mus.ok){ mus.ok = true; PREF.music = true; } else PREF.music = !PREF.music; prefSave(); musSync(); };
+document.addEventListener("visibilitychange", musSync);
 
 /* Sound effects, made in the browser so there are no files to load */
 let sfxOn = true, sfxCtx = null;
@@ -5853,7 +5946,7 @@ renderControls();
 nextWord(false, true); renderMeter(); renderList(); renderGrade(); syncClaude(); loadPics().then(() => { syncView(); aiView(); if (sync) syncRun(true); });
 syncSndBtn();
 show(["#practice", "#words", "#grade", "#cards"].includes(location.hash) ? location.hash.slice(1) : "home");
-document.body.classList.add("splash-on"); setRain(true); renderBadges(); checkBadges(); $("enter-btn").focus({preventScroll:true});
+document.body.classList.add("splash-on"); setRain(true); splashType(); renderBadges(); checkBadges(); $("enter-btn").focus({preventScroll:true});
 
 (async () => {
   if (!window.claude || !window.claude.use){ $("save-note").hidden = false; return; }
@@ -5911,6 +6004,7 @@ function applyPrefs(){
   document.body.classList.toggle("calm", PREF.motion); document.body.classList.toggle("rain-light", PREF.rain === "light");
   if (rain.on && (PREF.rain === "off" || PREF.motion)){ setRain(false); setRain(document.body.classList.contains("home-on") && $("splash").hidden); }
   else if (!rain.on && PREF.rain !== "off" && document.body.classList.contains("home-on") && $("splash").hidden){ document.body.classList.remove("rainy"); setRain(true); }
+  if (typeof mus === "object") musSync();
 }
 const segH = (k, opts) => `<div class="pseg" role="group">${opts.map(([v, l]) => `<button data-set="${k}" data-v="${v}" class="${String(pget(k)) === String(v) ? "on" : ""}" aria-pressed="${String(pget(k)) === String(v)}">${l}</button>`).join("")}</div>`;
 const chkH = (k, label) => `<label class="set-chk"><input type="checkbox" data-set="${k}" ${pget(k) ? "checked" : ""}> <span>${label}</span></label>`;
@@ -5935,6 +6029,8 @@ function renderSettings(){
     ${chkH("watch", "Watch my rival's turns in Word Master")}`;
   const vs = (() => { try { return speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang)); } catch(e){ return []; } })();
   $("set-sound").innerHTML = `<h2>Sound and voice</h2>
+    ${chkH("music", "Music on the welcome screen and while choosing what to do")}
+    ${rowH("Music volume", `<input type="range" min=".05" max="1" step=".05" value="${PREF.musicVol}" data-range="musicVol" aria-label="Music volume">`)}
     ${chkH("sound", "Sound effects")}
     ${rowH("Sound effects volume", `<input type="range" min=".2" max="1.5" step=".1" value="${PREF.vol}" data-range="vol" aria-label="Sound effects volume">`)}
     ${chkH("voice", "Socrates speaks in Word Master")}
@@ -5968,7 +6064,7 @@ $("view-settings").addEventListener("change", e => {
   const t = e.target;
   if (t.matches("input[type=checkbox][data-set]")) pset(t.dataset.set, t.checked);
   else if (t.matches("[data-hide]")){ const n = t.dataset.hide; PREF.hide = t.checked ? PREF.hide.filter(x => x !== n) : PREF.hide.concat(n); prefSave(); S.set = S.topic ? S.set : null; }
-  else if (t.matches("[data-range]")){ PREF[t.dataset.range] = +t.value; prefSave(); if (t.dataset.range === "vol") sfx("correct"); else tts("Hello."); }
+  else if (t.matches("[data-range]")){ PREF[t.dataset.range] = +t.value; prefSave(); if (t.dataset.range === "vol") sfx("correct"); else if (t.dataset.range === "musicVol"){ if (mus.a && mus.want) musFade(PREF.musicVol, 300); } else tts("Hello."); }
   else if (t.matches("[data-sel]")){ PREF[t.dataset.sel] = t.value; prefSave(); tts("Hello."); }
 });
 applyPrefs();

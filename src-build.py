@@ -21,7 +21,7 @@ head=f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="
 <script>window.SEED_STATE={seed};</script></head><body>'''
 tail='''<script>if ("serviceWorker" in navigator) addEventListener("load", () => { navigator.serviceWorker.register("sw.js", {updateViaCache:"none"}).then(r => r.update()).catch(() => {}); let had = !!navigator.serviceWorker.controller, done = false; navigator.serviceWorker.addEventListener("controllerchange", () => { if (had && !done){ done = true; location.reload(); } had = true; }); });</script></body></html>'''
 open('index.html','w').write(head+s+tail)
-media=sorted(f for f in os.listdir('.') if f.startswith('wm-'))
+media=sorted(f for f in os.listdir('.') if f.startswith(('wm-','welcome-')))
 # icons: the app's highlighted word mark
 for size in (192,512):
     im=Image.new('RGB',(size,size),(11,107,96)); d=ImageDraw.Draw(im)
@@ -37,11 +37,12 @@ core=["./","index.html","manifest.webmanifest","icon-192.png","icon-512.png"]
 sw='''/* Keeps the app and its recordings and pictures on the device so it works offline. */
 const CACHE = "word-trainer-v%d";
 const VOX = "word-trainer-voice-1";  /* Socrates' studio voice (vox-*): kept between app updates so it only downloads once. Change the number after rebuilding it with src-voice.py. */
+const MUSIC = "word-trainer-music-1";  /* the music (music-*), kept between app updates too. Change the number if a track is replaced under the same name. */
 const CORE = %s;
 const MEDIA = %s;
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE.map(u => new Request(u, {cache:"reload"})))).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE && k !== VOX).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE && k !== VOX && k !== MUSIC).map(k => caches.delete(k)))).then(() => self.clients.claim()));
   caches.open(CACHE).then(async c => { for (const m of MEDIA){ try { if (!(await c.match(m))) await c.add(m); } catch(err){} } });
 });
 self.addEventListener("fetch", e => {
@@ -53,8 +54,9 @@ self.addEventListener("fetch", e => {
       .catch(() => caches.match("index.html").then(h => h || caches.match("./")).then(h => h || fetch(r))));
     return;
   }
-  if (/\\/vox-(?!worker)[^/]+$/.test(new URL(r.url).pathname)){
-    e.respondWith(caches.open(VOX).then(c => c.match(r, {ignoreSearch:true}).then(hit => hit || fetch(r).then(res => { if (res && res.ok) c.put(r, res.clone()).catch(() => {}); return res; }))).catch(() => fetch(r)));
+  const keep = /\\/vox-(?!worker)[^/]+$/.test(new URL(r.url).pathname) ? VOX : /\\/music-[^/]+$/.test(new URL(r.url).pathname) ? MUSIC : "";
+  if (keep){
+    e.respondWith(caches.open(keep).then(c => c.match(r, {ignoreSearch:true}).then(hit => hit || fetch(r).then(res => { if (res && res.ok) c.put(r, res.clone()).catch(() => {}); return res; }))).catch(() => fetch(r)));
     return;
   }
   e.respondWith(caches.match(r, {ignoreSearch:true}).then(hit => hit || fetch(r).then(res => { if (res && res.ok){ const c = res.clone(); caches.open(CACHE).then(x => x.put(r, c)).catch(() => {}); } return res; })).catch(() => fetch(r)));
