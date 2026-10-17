@@ -62,5 +62,5 @@ Playwright + Chromium (`/opt/pw-browsers/chromium`, NODE_PATH=$(npm root -g)), s
 ## Open / next
 - FIRST in a new chat: Urch will confirm this build works on his devices. Don't change anything until he does.
 - Quizmaster voice: done and confirmed working by Urch (Piper "alan", made slower and deeper — he picked it after hearing samples; pause after answers agreed at 1.2 s). He'd liked an ElevenLabs preview ("posh well-spoken old man") but copying it isn't possible for free and isn't allowed by ElevenLabs. If the tablet is too slow speaking, options: COOP/COEP headers from the service worker to enable wasm threads (check picture finder images still load), or a lighter voice.
-- Later (he deferred): character pop-up sets for other flashcard categories.
+- Later (he deferred): character pop-up sets for other flashcard categories; picture finder sources (Met, Art Institute of Chicago, Library of Congress, Commons illustration search — free, no keys; test CORS first); character animation in code (breathing, sway, smooth pose changes, bigger reactions, Socrates bobbing while speaking, Matrix glow; no new art, respect reduce motion); Memory pairs and Fill the gap games (marked LATER in the Play menu).
 - He also plans a separate Arabic learning app.
