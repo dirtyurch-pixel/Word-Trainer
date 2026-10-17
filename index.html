@@ -564,6 +564,12 @@ body.splash-on .wrap{visibility:hidden}
 .lv{font-family:var(--mono);font-size:.75em;padding:0 .5em;border:1px solid;border-radius:3px}
 .lv.easy{color:var(--good)} .lv.medium{color:var(--part)} .lv.hard{color:var(--bad)}
 .wm-chk{display:flex;gap:.5em;align-items:center}
+.wm-vox{border:1px solid var(--line);padding:.5em .8em;background:#000}
+.wm-vox summary{display:block;cursor:pointer;color:var(--muted);padding:0} .wm-vox summary b{color:var(--ink);font-weight:600}
+.wm-vox[open]{display:flex;flex-direction:column;gap:.6em}
+.wm-vox select{font-size:1em;max-width:100%}
+.wm-sl{display:grid;grid-template-columns:1fr 1fr;gap:.8em}
+.wm-sl input{width:100%;accent-color:var(--accent)}
 .wm-chk input{width:auto}
 .wm-champs,.wm-champ{margin:0;color:var(--part)}
 .wm-champ{font-family:var(--display);font-size:1.2em}
@@ -3497,6 +3503,8 @@ const WM_POSE = ["idle", "right", "wrong", "sweat", "angry", "excited", "win", "
 const WM_QM = ["base", "ask", "correct", "no", "curious", "applaud", "point", "trophy", "sigh"];
 const wm = {topic:"", opp:"hypatia", watch:true, voice:true, g:null, loaded:false, tick:null, last:0};
 try { const v = JSON.parse(localStorage.getItem("wt-wm") || "{}"); wm.topic = v.topic || ""; wm.opp = WM_OPP.some(o => o.id === v.opp) ? v.opp : "hypatia"; wm.watch = v.watch !== false; wm.voice = v.voice !== false; } catch(e){}
+try { const v = JSON.parse(localStorage.getItem("wt-wm-vox") || "{}"); wm.vname = v.name || ""; wm.rate = +v.rate || 1; wm.pitch = +v.pitch || .9; } catch(e){ wm.rate = 1; wm.pitch = .9; }
+const wmVoxSave = () => { try { localStorage.setItem("wt-wm-vox", JSON.stringify({name:wm.vname, rate:wm.rate, pitch:wm.pitch})); } catch(e){} };
 const wmPrefs = () => { try { localStorage.setItem("wt-wm", JSON.stringify({topic:wm.topic, opp:wm.opp, watch:wm.watch, voice:wm.voice})); } catch(e){} };
 const wmS = () => { S.wm = S.wm || {games:[], champ:{}, miss:{}}; return S.wm; };
 const wmImg = (who, pose) => "wm-" + who + "-" + pose + ".webp";
@@ -3525,17 +3533,37 @@ function wmWrongGuess(w){
   return pick[Math.floor(Math.random()*pick.length)].word;
 }
 
-/* The quizmaster's voice */
-let wmVoice = null;
-function wmSay(t){
-  if (!wm.voice || !("speechSynthesis" in window) || !t || (wm.g && wm.g.skip)) return;
+/* The quizmaster's voice: the best British voice on this device, or the one chosen in the lobby */
+const wmVoices = () => { try { return speechSynthesis.getVoices(); } catch(e){ return []; } };
+function wmRank(v){ let s = 0; if (/en[-_]GB/i.test(v.lang)) s += 30; else if (/^en/i.test(v.lang)) s += 10; if (/natural|online|neural/i.test(v.name)) s += 40; if (/google uk english male/i.test(v.name)) s += 35; if (/ryan|thomas|george|daniel|arthur|oliver|male/i.test(v.name)) s += 12; if (/google/i.test(v.name)) s += 8; return s; }
+function wmPickVoice(){ const vs = wmVoices(); return vs.find(v => v.name === wm.vname) || vs.slice().sort((a, b) => wmRank(b) - wmRank(a))[0] || null; }
+function wmSay(t, force){
+  if ((!wm.voice && !force) || !("speechSynthesis" in window) || !t || (wm.g && wm.g.skip)) return;
   try {
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(t.replace(/_{3,}/g, "blank")), vs = speechSynthesis.getVoices();
-    wmVoice = wmVoice || vs.find(v => /en-GB/i.test(v.lang) && /male|daniel|george|arthur|ryan|oliver/i.test(v.name)) || vs.find(v => /en-GB/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang));
-    if (wmVoice) u.voice = wmVoice; u.lang = "en-GB"; u.rate = 1.02; u.pitch = .85; speechSynthesis.speak(u);
+    const u = new SpeechSynthesisUtterance(t.replace(/_{3,}/g, "blank")), v = wmPickVoice();
+    if (v){ u.voice = v; u.lang = v.lang; } else u.lang = "en-GB";
+    u.rate = wm.rate || 1; u.pitch = wm.pitch || .9; speechSynthesis.speak(u);
   } catch(e){}
 }
+function wmVoxUI(){
+  const box = $("wm-vox"); if (!box) return;
+  const vs = wmVoices(), cur = wmPickVoice(), en = vs.filter(v => /^en/i.test(v.lang)).sort((a, b) => wmRank(b) - wmRank(a)), other = vs.filter(v => !/^en/i.test(v.lang));
+  const opt = v => `<option value="${esc(v.name)}" ${cur && v.name === cur.name ? "selected" : ""}>${esc(v.name)} (${esc(v.lang)})</option>`;
+  box.innerHTML = `<summary>🔊 Socrates' voice: <b>${cur ? esc(cur.name) : "not available on this device"}</b></summary>
+    ${vs.length ? `<label class="wm-lab">Voice <select id="wm-vsel">${en.map(opt).join("")}${other.length ? `<optgroup label="Other languages">${other.map(opt).join("")}</optgroup>` : ""}</select></label>
+    <div class="wm-sl"><label class="wm-lab">Speed <input type="range" id="wm-rate" min=".7" max="1.4" step=".05" value="${wm.rate}"></label><label class="wm-lab">Pitch <input type="range" id="wm-pitch" min=".5" max="1.5" step=".05" value="${wm.pitch}"></label></div>
+    <div class="row"><button class="btn small" id="wm-vtest">▶ Preview</button><button class="btn small" id="wm-vreset">Reset to best</button></div>
+    <p class="wm-rules">The list shows the voices built into this browser, so it's different on each device and each device remembers its own choice. In Chrome, try <b>Google UK English Male</b>.</p>` : `<p class="wm-rules">This browser hasn't offered any voices yet. Try again in a moment.</p>`}`;
+  if (!vs.length) return;
+  const prev = () => wmSay("Welcome to Word Master. Which word means the open public square of an ancient Greek city?", true);
+  $("wm-vsel").onchange = e => { wm.vname = e.target.value; wmVoxSave(); wmVoxUI(); $("wm-vox").open = true; prev(); };
+  $("wm-rate").onchange = e => { wm.rate = +e.target.value; wmVoxSave(); prev(); };
+  $("wm-pitch").onchange = e => { wm.pitch = +e.target.value; wmVoxSave(); prev(); };
+  $("wm-vtest").onclick = prev;
+  $("wm-vreset").onclick = () => { wm.vname = ""; wm.rate = 1; wm.pitch = .9; wmVoxSave(); wmVoxUI(); $("wm-vox").open = true; prev(); };
+}
+try { speechSynthesis.addEventListener("voiceschanged", () => { const b = $("wm-vox"); if (b && !b.open) wmVoxUI(); }); } catch(e){}
 const wmHush = () => { try { speechSynthesis.cancel(); } catch(e){} };
 function wmVoiceBtn(){ $("wm-voice").textContent = wm.voice ? "Voice on" : "Voice off"; $("wm-voice").setAttribute("aria-pressed", wm.voice); }
 $("wm-voice").onclick = () => { wm.voice = !wm.voice; wmPrefs(); wmVoiceBtn(); if (!wm.voice) wmHush(); };
@@ -3588,13 +3616,14 @@ function wmLobby(){
     <label class="wm-lab">Specialist subject <select id="wm-topic">${ts.map(t => `<option ${t === wm.topic ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label>
     <p class="wm-lab">Choose your rival</p>
     <div class="wm-opps">${WM_OPP.map(o => `<button class="wm-opp${o.id === wm.opp ? " on" : ""}" data-opp="${o.id}"><img src="${wmImg(o.id, "idle")}" alt=""><b>${o.name}</b><span class="lv ${o.lvl.toLowerCase()}">${o.lvl}</span><span class="bl">${o.blurb}</span><span class="rec">Your record: ${rec(o.id)}</span></button>`).join("")}</div>
+    <details class="wm-vox" id="wm-vox"></details>
     <label class="wm-chk"><input type="checkbox" id="wm-watch" ${wm.watch ? "checked" : ""}> Watch my rival's turns (you can skip them any time)</label>
     ${champs.length ? `<p class="wm-champs">🏆 Word Master champion of: ${champs.map(esc).join(", ")}</p>` : `<p class="wm-champs">Beat Aristotle on a subject to become its Word Master champion.</p>`}
     <div class="row wm-go"><button class="btn primary" id="wm-start">Take the black chair</button><button class="btn" id="wm-stats">Stats and records</button></div></div>`);
   $("wm-topic").onchange = e => { wm.topic = e.target.value; wmPrefs(); };
   $("wm-watch").onchange = e => { wm.watch = e.target.checked; wmPrefs(); };
   document.querySelectorAll("#wm-ui [data-opp]").forEach(b => b.onclick = () => { wm.opp = b.dataset.opp; wmPrefs(); sfx("flip"); document.querySelectorAll("#wm-ui [data-opp]").forEach(x => x.classList.toggle("on", x === b)); });
-  $("wm-start").onclick = wmStart; $("wm-stats").onclick = wmStats;
+  $("wm-start").onclick = wmStart; $("wm-stats").onclick = wmStats; wmVoxUI();
 }
 
 /* The game */
