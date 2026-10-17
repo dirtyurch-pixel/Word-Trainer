@@ -284,10 +284,15 @@ body.splash-on .wrap{visibility:hidden}
 .cg-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
 .cg{display:grid;grid-template-columns:44px 1fr auto;gap:4px 12px;align-items:center;padding:12px;border:1px solid var(--line);background:var(--bg)}
 .cg svg{width:44px;height:auto;grid-row:span 2;stroke:var(--accent);fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
-.cg .cn{font-family:var(--display);font-weight:600;color:var(--ink);line-height:1.25;overflow-wrap:anywhere}
+.cg .cn{font-family:var(--display);font-weight:600;color:var(--ink);line-height:1.25;overflow-wrap:break-word;hyphens:manual}
 .cg .cl{font-family:var(--display);font-weight:800;font-size:1.8rem;line-height:1;color:var(--accent);grid-row:span 2;text-align:center;min-width:2.2ch;text-shadow:0 0 10px var(--glow)}
 .cg .cl small{display:block;font-family:var(--mono);font-size:.75rem;font-weight:400;color:var(--muted);text-shadow:none;margin-top:4px}
-.cg .cs{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+.cg .cs{font-family:var(--mono);font-size:.78rem;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.cg .cr{grid-column:1/-1;display:block}
+.cg .cs .r{color:var(--good)}.cg .cs .p{color:var(--part)}.cg .cs .w{color:var(--bad)}
+/* My grade: the cards sit in three groups; on narrower screens the groups dissolve and the cards keep their usual order */
+.gcol{display:contents}
+#prog-card{order:1}#grade-card{order:2}#badge-card{order:3}#catgrade-card{order:4}#goal-card{order:5}#backup-card{order:6}#ai-card{order:7}#sync-card{order:8}#coach-card{order:9}
 .cg .bar{grid-column:1/-1;height:6px}
 .cg .cgo{grid-column:1/-1;justify-self:start}
 .cg.off{opacity:.55}
@@ -481,6 +486,17 @@ body.splash-on .wrap{visibility:hidden}
   .wl-main .cpic svg{stroke:var(--accent);fill:none;stroke-width:4}
   .wl-main .cbar{display:flex;height:6px}
   .wl-main details.cat .catlist{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:10px}
+}
+@media (min-width:1600px){
+  body.grade-on .wrap{max-width:min(96vw,3200px)}
+  #view-grade{grid-template-columns:minmax(300px,1fr) minmax(0,2.7fr) minmax(300px,1fr);gap:24px}
+  #view-grade .gcol{display:flex;flex-direction:column;gap:24px;min-width:0}
+  #view-grade .card{grid-column:auto!important;order:0}
+  #view-grade .cg-list{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #view-grade .bgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (min-width:2600px){
+  #view-grade .cg-list{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
 @media (min-width:2600px){
   html{font-size:145%}
@@ -791,62 +807,68 @@ body.splash-on .wrap{visibility:hidden}
   </section>
 
   <section id="view-grade" hidden>
-    <div class="card" id="prog-card"><h2 id="prog-greet">Your progress</h2><div class="stats" id="prog-stats"></div></div>
-    <div class="card" id="grade-card"></div>
-    <div class="card" id="badge-card"><h2 id="badge-head">Badges</h2><p class="note">Tap a badge to see how to earn it.</p><div class="bgrid" id="badge-grid"></div></div>
-    <div class="card" id="catgrade-card"><h2>Grades by category</h2><p class="note">Each category gets its own grade once you have answered 3 questions in it. Categories you have not started have no grade yet.</p><div class="cg-list" id="catgrade-list"></div></div>
-    <div class="card">
-      <h2>Daily goal</h2>
-      <div class="stats" id="goal-stats"></div>
-      <div><label for="goal">Words to answer each day</label><input type="number" id="goal" min="1" max="100" step="1"></div>
-      <p class="note">A day counts towards your streak when you reach the goal.</p>
-    </div>
-    <div class="card" id="backup-card">
-      <h2>Back up and move your progress</h2>
-      <p class="note">Save your progress, your own words and your pictures to one file. Load that file on another device to carry everything across, or to get it back after clearing the browser.</p>
-      <p class="note" id="store-info"></p>
-      <div class="row"><button class="btn primary" id="bk-save">Save backup</button><button class="btn" id="bk-load">Load backup</button></div>
-      <input type="file" id="bk-file" accept=".json,application/json" hidden>
-      <p class="note" id="bk-msg" role="status" hidden></p>
-    </div>
-    <div class="card" id="ai-card" hidden>
-      <h2>Automatic marking</h2>
-      <p class="note">Let Claude mark your typed answers, like the Claude version does. It uses your own Anthropic API key, kept only on this device. Each answer costs a tiny fraction of a penny.</p>
-      <div id="ai-off">
-        <ol class="steps">
-          <li>Go to <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> and sign up or sign in. This is separate from your Claude app account.</li>
-          <li>Under <b>Billing</b>, add a small amount of credit, and set a monthly spending limit if you like.</li>
-          <li>Under <b>API keys</b>, tap <b>Create key</b>, name it "Word Trainer" and copy it. It starts with <code>sk-ant-</code>.</li>
-          <li>Paste it below and tap Save and test. Do the same on each device.</li>
-        </ol>
-        <div><label for="ai-key">Anthropic API key</label><input type="password" id="ai-key" autocomplete="off" spellcheck="false" placeholder="sk-ant-..."></div>
-        <div class="row"><button class="btn primary" id="ai-save">Save and test</button></div>
+    <div class="gcol gl">
+      <div class="card" id="prog-card"><h2 id="prog-greet">Your progress</h2><div class="stats" id="prog-stats"></div></div>
+      <div class="card" id="grade-card"></div>
+      <div class="card" id="goal-card">
+        <h2>Daily goal</h2>
+        <div class="stats" id="goal-stats"></div>
+        <div><label for="goal">Words to answer each day</label><input type="number" id="goal" min="1" max="100" step="1"></div>
+        <p class="note">A day counts towards your streak when you reach the goal.</p>
       </div>
-      <div id="ai-on" hidden><div class="row"><button class="btn" id="ai-test">Test it</button><button class="btn" id="ai-remove">Remove key from this device</button></div></div>
-      <p class="note" id="ai-msg" role="status"></p>
-    </div>
-    <div class="card" id="sync-card" hidden>
-      <h2>Sync between your devices</h2>
-      <div id="sync-off">
-        <p class="note">Keep your progress, own words and pictures the same on your tablet, phone and PC. Everything is stored in a private file in your own GitHub account.</p>
-        <ol class="steps">
-          <li>Open <a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=Word%20Trainer%20sync" target="_blank" rel="noopener">this GitHub page</a> (sign in if asked).</li>
-          <li>Set <b>Expiration</b> to <b>No expiration</b>. Leave only <b>gist</b> ticked.</li>
-          <li>Tap <b>Generate token</b> at the bottom, then copy the code that starts with <code>ghp_</code>.</li>
-          <li>Paste it below and tap Connect. Do the same on each device.</li>
-        </ol>
-        <div><label for="sync-token">Access code</label><input type="password" id="sync-token" autocomplete="off" spellcheck="false" placeholder="ghp_..."></div>
-        <div class="row"><button class="btn primary" id="sync-connect">Connect</button></div>
+      <div class="card" id="coach-card">
+        <h2>How you're doing and how to improve</h2>
+        <p id="coach-out" class="note">Claude reads your answers and results, then explains where your understanding is strong, where it slips, and what to do about it.</p>
+        <div class="row"><button class="btn primary" id="coach-btn">Explain how I'm doing</button></div>
       </div>
-      <div id="sync-on" hidden>
-        <div class="row"><button class="btn primary" id="sync-now">Sync now</button><button class="btn" id="sync-disc">Disconnect this device</button></div>
-      </div>
-      <p class="note" id="sync-msg" role="status"></p>
     </div>
-    <div class="card" id="coach-card">
-      <h2>How you're doing and how to improve</h2>
-      <p id="coach-out" class="note">Claude reads your answers and results, then explains where your understanding is strong, where it slips, and what to do about it.</p>
-      <div class="row"><button class="btn primary" id="coach-btn">Explain how I'm doing</button></div>
+    <div class="gcol gm">
+      <div class="card" id="catgrade-card"><h2>Grades by category</h2><p class="note">Each category gets its own grade once you have answered 3 questions in it. Categories you have not started have no grade yet.</p><div class="cg-list" id="catgrade-list"></div></div>
+    </div>
+    <div class="gcol gr">
+      <div class="card" id="badge-card"><h2 id="badge-head">Badges</h2><p class="note">Tap a badge to see how to earn it.</p><div class="bgrid" id="badge-grid"></div></div>
+      <div class="card" id="backup-card">
+        <h2>Back up and move your progress</h2>
+        <p class="note">Save your progress, your own words and your pictures to one file. Load that file on another device to carry everything across, or to get it back after clearing the browser.</p>
+        <p class="note" id="store-info"></p>
+        <div class="row"><button class="btn primary" id="bk-save">Save backup</button><button class="btn" id="bk-load">Load backup</button></div>
+        <input type="file" id="bk-file" accept=".json,application/json" hidden>
+        <p class="note" id="bk-msg" role="status" hidden></p>
+      </div>
+      <div class="card" id="ai-card" hidden>
+        <h2>Automatic marking</h2>
+        <p class="note">Let Claude mark your typed answers, like the Claude version does. It uses your own Anthropic API key, kept only on this device. Each answer costs a tiny fraction of a penny.</p>
+        <div id="ai-off">
+          <ol class="steps">
+            <li>Go to <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> and sign up or sign in. This is separate from your Claude app account.</li>
+            <li>Under <b>Billing</b>, add a small amount of credit, and set a monthly spending limit if you like.</li>
+            <li>Under <b>API keys</b>, tap <b>Create key</b>, name it "Word Trainer" and copy it. It starts with <code>sk-ant-</code>.</li>
+            <li>Paste it below and tap Save and test. Do the same on each device.</li>
+          </ol>
+          <div><label for="ai-key">Anthropic API key</label><input type="password" id="ai-key" autocomplete="off" spellcheck="false" placeholder="sk-ant-..."></div>
+          <div class="row"><button class="btn primary" id="ai-save">Save and test</button></div>
+        </div>
+        <div id="ai-on" hidden><div class="row"><button class="btn" id="ai-test">Test it</button><button class="btn" id="ai-remove">Remove key from this device</button></div></div>
+        <p class="note" id="ai-msg" role="status"></p>
+      </div>
+      <div class="card" id="sync-card" hidden>
+        <h2>Sync between your devices</h2>
+        <div id="sync-off">
+          <p class="note">Keep your progress, own words and pictures the same on your tablet, phone and PC. Everything is stored in a private file in your own GitHub account.</p>
+          <ol class="steps">
+            <li>Open <a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=Word%20Trainer%20sync" target="_blank" rel="noopener">this GitHub page</a> (sign in if asked).</li>
+            <li>Set <b>Expiration</b> to <b>No expiration</b>. Leave only <b>gist</b> ticked.</li>
+            <li>Tap <b>Generate token</b> at the bottom, then copy the code that starts with <code>ghp_</code>.</li>
+            <li>Paste it below and tap Connect. Do the same on each device.</li>
+          </ol>
+          <div><label for="sync-token">Access code</label><input type="password" id="sync-token" autocomplete="off" spellcheck="false" placeholder="ghp_..."></div>
+          <div class="row"><button class="btn primary" id="sync-connect">Connect</button></div>
+        </div>
+        <div id="sync-on" hidden>
+          <div class="row"><button class="btn primary" id="sync-now">Sync now</button><button class="btn" id="sync-disc">Disconnect this device</button></div>
+        </div>
+        <p class="note" id="sync-msg" role="status"></p>
+      </div>
     </div>
   </section>
 
@@ -3316,7 +3338,7 @@ function renderCatGrades(){
     const pc = v => x.ans ? (100*v/x.ans) + "%" : "0%";
     const letter = x.graded ? GRADES.find(g => x.score >= g[0])[1] : "";
     const right = x.graded ? `<span class="cl" aria-label="Grade ${letter}">${letter}<small>${x.score}%</small></span>` : `<span class="cl wait">${x.ans ? "Grade after " + CAT_MIN + " answers" : "Not started"}</span>`;
-    return `<div class="cg${x.ans ? "" : " off"}">${topicArt(x.t)}<span class="cn">${esc(x.t)}</span>${right}<span class="cs">${x.ans ? x.tried + " of " + x.n + " words tried · " + x.c + " right, " + x.p + " partly, " + x.i + " wrong" : x.n + " words"}</span>${x.ans ? `<span class="bar"><i class="k" style="width:${pc(x.c)}"></i><i class="l" style="width:${pc(x.p)}"></i><i class="b" style="width:${pc(x.i)}"></i></span>` : ""}<button class="btn small cgo" data-cg="${esc(x.t)}">${x.ans ? "Practise" : "Start"}</button></div>`;
+    return `<div class="cg${x.ans ? "" : " off"}">${topicArt(x.t)}<span class="cn">${esc(x.t)}</span>${right}<span class="cs">${x.ans ? x.tried + " of " + x.n + " words tried" : x.n + " words"}</span>${x.ans ? `<span class="cs cr"><span class="r">${x.c} right</span> · <span class="p">${x.p} partly</span> · <span class="w">${x.i} wrong</span></span>` : ""}${x.ans ? `<span class="bar"><i class="k" style="width:${pc(x.c)}"></i><i class="l" style="width:${pc(x.p)}"></i><i class="b" style="width:${pc(x.i)}"></i></span>` : ""}<button class="btn small cgo" data-cg="${esc(x.t)}">${x.ans ? "Practise" : "Start"}</button></div>`;
   }).join("");
 }
 $("catgrade-list").addEventListener("click", e => { const b = e.target.closest("[data-cg]"); if (b){ show("practice"); setTopic(b.dataset.cg); } });
@@ -3406,6 +3428,7 @@ function show(tab){
   if (tab === "wm") wmLobby();
   if (tab === "hub") renderHub();
   document.querySelector(".meter").hidden = ["home", "play", "hub", "wm", "speed"].includes(tab);
+  document.body.classList.toggle("grade-on", tab === "grade");
   const rainy = ["home", "hub", "wm", "speed"].includes(tab); document.body.classList.toggle("home-on", rainy); if ($("splash").hidden) setRain(rainy);
   if (tab === "home") renderHome();
   if (tab === "grade"){ renderProg(); renderCatGrades(); }
