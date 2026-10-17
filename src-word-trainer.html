@@ -3648,10 +3648,16 @@ function wmTalkLeft(){
   try { if (speechSynthesis.speaking) ms = Math.max(ms, 150); } catch(e){}
   return ms;
 }
-// wait at least min ms, then until he has finished (never more than 9 s)
+// wait at least min ms; if he's speaking, wait until he has finished and then a natural pause (never more than 10 s)
+const WM_BEAT = 1200;
 const wmAfterTalk = min => new Promise(res => {
-  const t0 = performance.now(), go = () => { const g = wm.g, el = performance.now() - t0; if (!g || g.dead || g.skip || el > 9000 || (el >= min && wmTalkLeft() <= 0)) res(); else setTimeout(go, 100); };
-  setTimeout(go, min);
+  const t0 = performance.now(); let talked = wmTalkLeft() > 0, quiet = talked ? 0 : t0;
+  const go = () => {
+    const g = wm.g, now = performance.now(), el = now - t0;
+    if (wmTalkLeft() > 0){ talked = true; quiet = 0; } else if (!quiet) quiet = now;
+    if (!g || g.dead || g.skip || el > 10000 || (el >= min && quiet && (!talked || now - quiet >= WM_BEAT))) res(); else setTimeout(go, 100);
+  };
+  setTimeout(go, 100);
 });
 const wmHush = () => { try { speechSynthesis.cancel(); } catch(e){} voxStop(); };
 function wmVoiceBtn(){ $("wm-voice").textContent = wm.voice ? "Voice on" : "Voice off"; $("wm-voice").setAttribute("aria-pressed", wm.voice); }
