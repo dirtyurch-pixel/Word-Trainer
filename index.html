@@ -554,6 +554,7 @@ body.splash-on .wrap{visibility:hidden}
 .wm-lab{font-family:var(--mono);color:var(--muted);font-size:.85em;margin:.3em 0 0;display:flex;flex-direction:column;gap:.4em;letter-spacing:.05em}
 .wm-lab select{font-size:1.05em;font-family:var(--body);padding:.4em}
 .wm-opps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7em}
+.wm-opps.sp{grid-template-columns:repeat(4,minmax(0,1fr))}
 .wm-opp{display:flex;flex-direction:column;align-items:center;gap:.3em;padding:.6em;border:1px solid var(--line);background:#000;color:var(--ink);cursor:pointer;font:inherit;font-size:.92em;text-align:center;border-radius:.5em}
 .wm-opp img{width:100%;height:7.5cqw;object-fit:cover;object-position:50% 0}
 .wm-opp.on{border-color:var(--accent);box-shadow:0 0 1em var(--glow)}
@@ -562,7 +563,8 @@ body.splash-on .wrap{visibility:hidden}
 .wm-opp .bl{color:var(--muted);font-size:.85em;line-height:1.3}
 .wm-opp .rec{font-family:var(--mono);color:var(--muted);font-size:.8em}
 .lv{font-family:var(--mono);font-size:.75em;padding:0 .5em;border:1px solid;border-radius:3px}
-.lv.easy{color:var(--good)} .lv.medium{color:var(--part)} .lv.hard{color:var(--bad)}
+.lv.easy{color:var(--good)} .lv.medium{color:var(--part)} .lv.hard{color:var(--bad)} .lv.specialist{color:var(--accent)}
+.wm-opp .spec{font-size:.8em;line-height:1.35;color:var(--ink)} .wm-opp .spec b{font-family:inherit;font-size:1em;color:var(--muted);font-weight:600}
 .wm-chk{display:flex;gap:.5em;align-items:center}
 .wm-vox{border:1px solid var(--line);padding:.5em .8em;background:#000}
 .wm-vox summary{display:block;cursor:pointer;color:var(--muted);padding:0} .wm-vox summary b{color:var(--ink);font-weight:600}
@@ -585,6 +587,7 @@ body.splash-on .wrap{visibility:hidden}
 .wm-tiles div{border:1px solid var(--line);padding:.55em;text-align:center;background:#000}
 .wm-tiles b{display:block;font-family:var(--display);font-size:1.5em;color:var(--accent)}
 .wm-tiles span{font-size:.8em;color:var(--muted)}
+.wm-tiles.r5{grid-template-columns:repeat(5,minmax(0,1fr))}
 .wm-chart{width:100%;height:auto;font-family:var(--mono);font-size:12px}
 .wm-chart text{fill:var(--muted)} .wm-chart text.you{fill:var(--accent)} .wm-chart text.riv{fill:#9fd7ff}
 .wm-chart .ax{stroke:var(--line)} .wm-chart .gl{stroke:var(--line);stroke-dasharray:3 4}
@@ -612,11 +615,11 @@ body.splash-on .wrap{visibility:hidden}
   .wm-scene{position:relative;aspect-ratio:16/9;border-radius:8px}
   .wm-ui,.wm-big .wm-ui{position:static;width:auto;left:auto;top:auto;bottom:auto;font-size:1rem;margin-top:12px;overflow:visible;padding:1em}
   .wm-big .wm-con{left:66%}
-  .wm-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wm-tiles,.wm-tiles.r5{grid-template-columns:repeat(2,minmax(0,1fr))}
   .wm-ans{flex-wrap:wrap} .wm-ans input,.wm-fake{flex-basis:100%}
 }
-@media (max-width:999px){.wm-opp img{height:120px}}
-@media (max-width:560px){.wm-opps{grid-template-columns:1fr}.wm-opp{display:grid;grid-template-columns:28% 1fr;column-gap:12px;text-align:left;align-items:start;justify-items:start}.wm-opp img{grid-row:span 4;width:100%;height:110px}}
+@media (max-width:999px){.wm-opp img{height:120px}.wm-opps.sp{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.wm-opps,.wm-opps.sp{grid-template-columns:1fr}.wm-opp{display:grid;grid-template-columns:28% 1fr;column-gap:12px;text-align:left;align-items:start;justify-items:start}.wm-opp img{grid-row:span 5;width:100%;height:110px}}
 @media (prefers-reduced-motion:reduce){.fx-jump,.fx-bounce,.fx-shake,.wp{animation:none}}
 
 @media (prefers-reduced-motion:reduce){.panel{transition:none}}
@@ -3496,7 +3499,11 @@ $("ch-play").onclick = () => { $("choice").hidden = true; openPlay(chosen); };
 const WM_OPP = [
   {id:"aesop", name:"Aesop", lvl:"Easy", blurb:"The storyteller. Friendly, nervous and fond of passing.", skill:.57, pass:.42, speed:1.15},
   {id:"hypatia", name:"Hypatia", lvl:"Medium", blurb:"Mathematician of Alexandria. Sharp and competitive.", skill:.7, pass:.3, speed:1.05},
-  {id:"aristotle", name:"Aristotle", lvl:"Hard", blurb:"The reigning champion. Calm, proud and rarely wrong.", skill:.85, pass:.18, speed:.95}];
+  {id:"aristotle", name:"Aristotle", lvl:"Hard", blurb:"The reigning champion. Calm, proud and rarely wrong.", skill:.85, pass:.18, speed:.95},
+  // specialists: hi = skill on their own subjects (and a little quicker there), lo = on their weak subjects, skill = everything else
+  {id:"herodotus", name:"Herodotus", lvl:"Specialist", blurb:"The father of history and a great traveller. Brilliant on his subjects, shaky outside them.", skill:.62, pass:.28, speed:1, spec:["Ancient Greece", "Land and sea"], weak:["Science and maths"], hi:.9, lo:.4}];
+const wmSpec = (o, t) => !!(o.spec && o.spec.includes(t));
+const wmSkill = (o, w) => wmSpec(o, w.topic) ? o.hi : o.weak && o.weak.includes(w.topic) ? o.lo : o.skill;
 const WM_ROUNDS = [{n:"Specialist subject", s:120}, {n:"General knowledge", s:120}, {n:"The final", s:60}];
 const WM_STEPS = [[0, "opp"], [0, "you"], [1, "opp"], [1, "you"], [2, "opp"], [2, "you"]];
 const WM_POSE = ["idle", "right", "wrong", "sweat", "angry", "excited", "win", "lose"];
@@ -3709,11 +3716,14 @@ function wmLobby(){
   const ts = wmTopics(); if (!ts.includes(wm.topic)) wm.topic = ts.includes("Ancient Greece") ? "Ancient Greece" : ts[0];
   const st = wmS(), rec = id => { const gs = st.games.filter(x => x.o === id); return gs.filter(x => x.w > 0).length + "–" + gs.filter(x => x.w < 0).length; };
   const champs = Object.keys(st.champ);
+  const oppCard = o => `<button class="wm-opp${o.id === wm.opp ? " on" : ""}" data-opp="${o.id}"><img src="${wmImg(o.id, "idle")}" alt=""><b>${o.name}</b><span class="lv ${o.lvl.toLowerCase()}">${o.lvl}</span><span class="bl">${o.blurb}</span>${o.spec ? `<span class="spec"><b>Strong:</b> ${o.spec.map(esc).join(", ")}<br><b>Weak:</b> ${o.weak.map(esc).join(", ")}</span>` : ""}<span class="rec">Your record: ${rec(o.id)}</span></button>`;
   wmUi(`<div class="wmc"><h3 class="wm-h">Welcome to Word Master</h3>
     <p class="wm-rules">Socrates reads out a meaning and you type the word. <b>Round 1:</b> 2 minutes on your specialist subject. <b>Round 2:</b> 2 minutes of general knowledge. <b>The final:</b> 60 seconds on the words you got wrong or passed. One or two wrong letters still count, and the clock stops while your answer is checked.</p>
     <label class="wm-lab">Specialist subject <select id="wm-topic">${ts.map(t => `<option ${t === wm.topic ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label>
     <p class="wm-lab">Choose your rival</p>
-    <div class="wm-opps">${WM_OPP.map(o => `<button class="wm-opp${o.id === wm.opp ? " on" : ""}" data-opp="${o.id}"><img src="${wmImg(o.id, "idle")}" alt=""><b>${o.name}</b><span class="lv ${o.lvl.toLowerCase()}">${o.lvl}</span><span class="bl">${o.blurb}</span><span class="rec">Your record: ${rec(o.id)}</span></button>`).join("")}</div>
+    <div class="wm-opps">${WM_OPP.filter(o => !o.spec).map(oppCard).join("")}</div>
+    <p class="wm-lab">Specialists: very strong on their own subjects, weaker on others</p>
+    <div class="wm-opps sp">${WM_OPP.filter(o => o.spec).map(oppCard).join("")}</div>
     <details class="wm-vox" id="wm-vox"></details>
     <label class="wm-chk"><input type="checkbox" id="wm-watch" ${wm.watch ? "checked" : ""}> Watch my rival's turns (you can skip them any time)</label>
     ${champs.length ? `<p class="wm-champs">🏆 Word Master champion of: ${champs.map(esc).join(", ")}</p>` : `<p class="wm-champs">Beat Aristotle on a subject to become its Word Master champion.</p>`}
@@ -3729,8 +3739,9 @@ function wmStart(){
   const opp = WM_OPP.find(o => o.id === wm.opp);
   wm.g = {id:Date.now(), topic:wm.topic, opp, step:-1, round:0, who:"opp", form:(Math.random() - .5)*.14, score:{you:[0, 0, 0], opp:[0, 0, 0]}, pass:{you:0, opp:0}, wrong:{you:0, opp:0}, asked:{you:0, opp:0}, missed:{you:[], opp:[]}, final:{}, qs:{}, used:new Set(), times:[], best:0, fastest:0, run:0, bad:0, left:0, running:false, skip:false, dead:false, missLog:[]};
   wmMode(false); wmUi(""); wm.last = performance.now(); clearInterval(wm.tick); wm.tick = setInterval(wmTick, 100);
-  wmQM("applaud", "Welcome to Word Master! Tonight " + opp.name + " takes you on.", 2600); wmSay("Welcome to Word Master. Tonight, " + opp.name + " takes you on.");
-  setTimeout(() => { if (wm.g && !wm.g.dead) wmNextTurn(); }, 2400);
+  const home = wmSpec(opp, wm.topic) ? " And " + wm.topic + " is his specialist subject!" : "";
+  wmQM("applaud", "Welcome to Word Master! Tonight " + opp.name + " takes you on." + home, 2600 + (home ? 2000 : 0)); wmSay("Welcome to Word Master. Tonight, " + opp.name + " takes you on." + home);
+  wmAfterTalk(2400).then(() => { if (wm.g && !wm.g.dead) wmNextTurn(); });
 }
 function wmTick(){
   const g = wm.g, now = performance.now(), dt = now - wm.last; wm.last = now;
@@ -3833,13 +3844,13 @@ async function wmCpuTurn(){
       $("wm-skip").onclick = () => { g.skip = true; wmHush(); wmCB(""); };
       wmQM("ask", null); wmSay(clue);
     }
-    const think = (4600 + d*3600 + Math.random()*3000)*o.speed*(g.run >= 3 ? .93 : 1)*(g.bad >= 2 ? 1.18 : 1);
+    const think = (4600 + d*3600 + Math.random()*3000)*o.speed*(wmSpec(o, w.topic) ? .85 : 1)*(g.run >= 3 ? .93 : 1)*(g.bad >= 2 ? 1.18 : 1);
     if (g.skip) g.left -= think;
     else { if (think > 7000) setTimeout(() => { if (!g.skip && g.running) wmCB(["Erm…", "Hmm…", "Let me think…", "Oh, it's on the tip of my tongue…"][Math.floor(Math.random()*4)]); }, think*.45); g.running = true; await wmSleep(think); g.running = false; wmCB(""); }
     if (g.dead || wm.g !== g) return;
     if (g.left <= 0){ g.left = 0; g.timeUp = true; }
     if (g.nerve == null && g.left < 15000) g.nerve = Math.random() < .5 ? .06 : -.09;
-    const p = Math.max(.05, Math.min(.96, o.skill + g.form - .3*d + .03*Math.min(g.run, 4) - .05*Math.min(g.bad, 3) + (g.nerve || 0)));
+    const p = Math.max(.05, Math.min(.96, wmSkill(o, w) + g.form - .3*d + .03*Math.min(g.run, 4) - .05*Math.min(g.bad, 3) + (g.nerve || 0)));
     const kind = Math.random() < p ? "right" : Math.random() < o.pass*(.7 + d) ? "pass" : "wrong";
     if (!g.skip){
       const f = $("wm-fake"); f.textContent = "";
@@ -3871,10 +3882,11 @@ function wmEnd(){
   if (st.games.length > 300) st.games.splice(0, st.games.length - 300);
   for (const k of g.missLog) st.miss[k] = (st.miss[k] | 0) + 1;
   let champ = false; if (res > 0 && g.opp.id === "aristotle" && !st.champ[g.topic]){ st.champ[g.topic] = dayKey(); champ = true; }
+  const onHome = res > 0 && wmSpec(g.opp, g.topic);
   save();
   wmMode(true); wmLight(true); wmCB("");
   wmCon("you", res > 0 ? "win" : res < 0 ? "lose" : "idle", res > 0 ? {box:"fx-bounce", p:["sparkle", "sparkle"]} : null);
-  const line = res > 0 ? (champ ? "Congratulations! You are the Word Master champion of " + g.topic + "!" : "Congratulations! You beat " + g.opp.name + ".") : res < 0 ? g.opp.name + " wins tonight. Better luck next time." : "It's a draw!";
+  const line = res > 0 ? (champ ? "Congratulations! You are the Word Master champion of " + g.topic + "!" : onHome ? "Congratulations! You beat " + g.opp.name + " on his own specialist subject!" : "Congratulations! You beat " + g.opp.name + ".") : res < 0 ? g.opp.name + " wins tonight. Better luck next time." : "It's a draw!";
   wmQM(res > 0 ? "trophy" : res < 0 ? "sigh" : "applaud", line, 0); wmSay(line);
   const miss = [...new Set(g.missLog)].map(byKey).filter(Boolean), cell = a => a.map(n => `<td>${n}</td>`).join("");
   const sec = ms => ms ? (ms/1000).toFixed(1) + "s" : "–";
@@ -3912,7 +3924,7 @@ function wmStats(){
     <p class="wm-lab">Top 10 games</p><table class="wm-t"><tr><th>Date</th><th>Subject</th><th>Rival</th><th>Score</th><th>Passes</th><th>Result</th></tr>${top.map(x => `<tr><td>${esc(x.d)}</td><td>${esc(x.t)}</td><td>${esc(name(x.o))}</td><td><b>${x.yr}</b>–${ot(x)}</td><td>${x.yp}</td><td>${x.w > 0 ? "Won" : x.w < 0 ? "Lost" : "Draw"}</td></tr>`).join("")}</table>
     <p class="wm-lab">By subject</p><table class="wm-t"><tr><th>Subject</th><th>Games</th><th>Best</th><th>Average</th><th>Correct</th><th>Champion</th></tr>${Object.entries(subs).sort((a, b) => b[1].n - a[1].n).map(([t, s]) => `<tr><td>${esc(t)}</td><td>${s.n}</td><td>${s.best}</td><td>${(s.tot/s.n).toFixed(1)}</td><td>${Math.round(100*s.r/Math.max(1, s.q))}%</td><td>${st.champ[t] ? "🏆" : ""}</td></tr>`).join("")}</table>
     <p class="wm-lab">Head to head</p><table class="wm-t"><tr><th>Rival</th><th>Won</th><th>Drawn</th><th>Lost</th></tr>${h2h.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join("")}</table>
-    <p class="wm-lab">Records</p><div class="wm-tiles"><div><b>${streak ? streak.bs : 0}</b><span>longest run of right answers</span></div><div><b>${fast ? (fast.fa/1000).toFixed(1) + "s" : "–"}</b><span>fastest right answer</span></div><div><b>${fewest ? fewest.yp : "–"}</b><span>fewest passes (scoring 5+)</span></div><div><b>${Object.keys(st.champ).length}</b><span>subjects as champion</span></div></div>
+    <p class="wm-lab">Records</p><div class="wm-tiles r5"><div><b>${streak ? streak.bs : 0}</b><span>longest run of right answers</span></div><div><b>${fast ? (fast.fa/1000).toFixed(1) + "s" : "–"}</b><span>fastest right answer</span></div><div><b>${fewest ? fewest.yp : "–"}</b><span>fewest passes (scoring 5+)</span></div><div><b>${Object.keys(st.champ).length}</b><span>subjects as champion</span></div><div><b>${new Set(G.filter(x => x.w > 0 && WM_OPP.some(o => o.id === x.o && wmSpec(o, x.t))).map(x => x.o + "|" + x.t)).size}</b><span>specialists beaten on their own subject</span></div></div>
     ${weak.length ? `<p class="wm-lab">Your weak spots in Word Master</p><div class="chips">${weak.map(([w, n]) => `<span class="pill incorrect">${esc(w.word)} ×${n}</span>`).join("")}</div>` : ""}
     <div class="row wm-go"><button class="btn primary" id="wm-back">Back to the lobby</button></div></div>`);
   $("wm-back").onclick = wmLobby;
