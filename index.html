@@ -17,7 +17,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
-html{background:var(--bg)}
+html{background:var(--bg);font-size:calc(100% * var(--ts, 1))}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:1rem;line-height:1.5}
 .wrap{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:24px 48px;display:flex;flex-direction:column;gap:20px}
 section{display:flex;flex-direction:column;gap:16px}
@@ -233,7 +233,7 @@ details.cat .catlist{margin-top:6px}
 .top{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 /* Tablet and desktop: larger type, and side-by-side cards so the page uses the full width */
 @media (min-width:760px){
-  html{font-size:112.5%}
+  html{font-size:calc(112.5% * var(--ts, 1))}
   .wrap{padding-inline:28px;gap:24px}
   .card{padding:32px}
   #view-grade{display:grid;grid-template-columns:1fr 1fr;align-items:start}
@@ -252,6 +252,22 @@ h1 .homelink{color:var(--accent);letter-spacing:.05em;text-shadow:0 0 12px var(-
 #rain{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;display:none}
 body.rainy #rain{display:block}
 body.home-on #rain{opacity:.45}
+body.rain-light #rain{opacity:.18!important}
+body.calm *,body.calm *::before,body.calm *::after{animation:none!important;transition:none!important}
+/* Settings */
+.set-grid{display:grid;grid-template-columns:1fr;gap:20px;align-items:start}
+@media (min-width:760px){.set-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:1600px){body.set-on .wrap{max-width:min(96vw,3200px)}.set-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.set-row{display:flex;flex-direction:column;gap:6px;margin:0 0 14px}
+.set-row>b{font-weight:600}
+.set-row .note{margin:0}
+.set-chk{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;cursor:pointer}
+.set-chk input{width:auto;margin-top:.25em}
+.set-hide{display:grid;grid-template-columns:repeat(auto-fill,minmax(13em,1fr));gap:2px 12px;max-height:16em;overflow:auto;padding:6px;border:1px solid var(--line);background:#000}
+.set-hide .set-chk{margin:0;font-size:.9rem}
+.set-row select,.set-row input[type=range]{max-width:100%}
+.set-row .pseg{justify-content:flex-start}
+#set-learn{order:1!important}#set-cards{order:2!important}#set-games{order:3!important}#view-settings #goal-card{order:4!important}#set-sound{order:5!important}#set-display{order:6!important}#set-data{order:7!important}#view-settings #backup-card{order:8!important}#view-settings #sync-card{order:9!important}#view-settings #ai-card{order:10!important}
 /* Welcome screen */
 #splash{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:24px 16px;background:transparent}
 #splash[hidden]{display:none}
@@ -422,7 +438,7 @@ body.splash-on .wrap{visibility:hidden}
 .side-h{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;color:var(--muted);margin:0 0 4px;text-transform:uppercase}
 /* Wide PC screens: a bigger centre column; the sides stay free */
 @media (min-width:1600px){
-  html{font-size:125%}
+  html{font-size:calc(125% * var(--ts, 1))}
   .wrap{max-width:1560px}
   .panels{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:26px 20px;overflow:visible;padding:8px 14px 20px}
   .panel{width:auto;height:330px}
@@ -502,7 +518,7 @@ body.splash-on .wrap{visibility:hidden}
   #view-grade .cg-list{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
 @media (min-width:2600px){
-  html{font-size:145%}
+  html{font-size:calc(145% * var(--ts, 1))}
   .wrap{max-width:1900px}
   .panel{height:340px}
   .panels{gap:20px 22px}
@@ -690,6 +706,7 @@ body.splash-on .wrap{visibility:hidden}
         <button id="tab-cards" role="tab">Flashcards</button>
         <button id="tab-words" role="tab">Word list</button>
         <button id="tab-grade" role="tab">My grade</button>
+        <button id="tab-settings" role="tab">Settings</button>
       </div>
       <button class="btn small" id="snd-btn" aria-pressed="true">Sound on</button>
       <button class="btn small" id="fs-btn">Full screen</button>
@@ -713,6 +730,67 @@ body.splash-on .wrap{visibility:hidden}
   <section id="view-speed" hidden>
     <div class="play-head"><button class="btn small" id="sp-back">Home</button><h2 class="ptitle">Speed Round</h2></div>
     <div class="sp-wrap"><div class="sp-side" aria-hidden="true"><img id="sp-qm" alt=""></div><div id="sp-area"></div><div class="sp-side" aria-hidden="true"><img id="sp-you" alt=""></div></div>
+  </section>
+
+  <section id="view-settings" hidden>
+    <h2 class="ptitle">Settings</h2>
+    <p class="note">These settings are saved on this device. Your progress, words and pictures are not changed by them.</p>
+    <div class="set-grid">
+    <div class="card" id="set-learn"></div>
+    <div class="card" id="goal-card">
+      <h2>Daily goal</h2>
+      <div class="stats" id="goal-stats"></div>
+      <div><label for="goal">Words to answer each day</label><input type="number" id="goal" min="1" max="100" step="1"></div>
+      <p class="note">A day counts towards your streak when you reach the goal.</p>
+    </div>
+    <div class="card" id="set-cards"></div>
+    <div class="card" id="set-games"></div>
+    <div class="card" id="set-sound"></div>
+    <div class="card" id="set-display"></div>
+    <div class="card" id="set-data"></div>
+    <div class="card" id="backup-card">
+      <h2>Back up and move your progress</h2>
+      <p class="note">Save your progress, your own words and your pictures to one file. Load that file on another device to carry everything across, or to get it back after clearing the browser.</p>
+      <p class="note" id="store-info"></p>
+      <div class="row"><button class="btn primary" id="bk-save">Save backup</button><button class="btn" id="bk-load">Load backup</button></div>
+      <input type="file" id="bk-file" accept=".json,application/json" hidden>
+      <p class="note" id="bk-msg" role="status" hidden></p>
+    </div>
+    <div class="card" id="sync-card" hidden>
+      <h2>Sync between your devices</h2>
+      <div id="sync-off">
+        <p class="note">Keep your progress, own words and pictures the same on your tablet, phone and PC. Everything is stored in a private file in your own GitHub account.</p>
+        <ol class="steps">
+          <li>Open <a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=Word%20Trainer%20sync" target="_blank" rel="noopener">this GitHub page</a> (sign in if asked).</li>
+          <li>Set <b>Expiration</b> to <b>No expiration</b>. Leave only <b>gist</b> ticked.</li>
+          <li>Tap <b>Generate token</b> at the bottom, then copy the code that starts with <code>ghp_</code>.</li>
+          <li>Paste it below and tap Connect. Do the same on each device.</li>
+        </ol>
+        <div><label for="sync-token">Access code</label><input type="password" id="sync-token" autocomplete="off" spellcheck="false" placeholder="ghp_..."></div>
+        <div class="row"><button class="btn primary" id="sync-connect">Connect</button></div>
+      </div>
+      <div id="sync-on" hidden>
+        <div class="row"><button class="btn primary" id="sync-now">Sync now</button><button class="btn" id="sync-disc">Disconnect this device</button></div>
+      </div>
+      <p class="note" id="sync-msg" role="status"></p>
+    </div>
+    <div class="card" id="ai-card" hidden>
+      <h2>Automatic marking</h2>
+      <p class="note">Let Claude mark your typed answers, like the Claude version does. It uses your own Anthropic API key, kept only on this device. Each answer costs a tiny fraction of a penny.</p>
+      <div id="ai-off">
+        <ol class="steps">
+          <li>Go to <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> and sign up or sign in. This is separate from your Claude app account.</li>
+          <li>Under <b>Billing</b>, add a small amount of credit, and set a monthly spending limit if you like.</li>
+          <li>Under <b>API keys</b>, tap <b>Create key</b>, name it "Word Trainer" and copy it. It starts with <code>sk-ant-</code>.</li>
+          <li>Paste it below and tap Save and test. Do the same on each device.</li>
+        </ol>
+        <div><label for="ai-key">Anthropic API key</label><input type="password" id="ai-key" autocomplete="off" spellcheck="false" placeholder="sk-ant-..."></div>
+        <div class="row"><button class="btn primary" id="ai-save">Save and test</button></div>
+      </div>
+      <div id="ai-on" hidden><div class="row"><button class="btn" id="ai-test">Test it</button><button class="btn" id="ai-remove">Remove key from this device</button></div></div>
+      <p class="note" id="ai-msg" role="status"></p>
+    </div>
+    </div>
   </section>
 
   <section id="view-wm" hidden>
@@ -813,12 +891,6 @@ body.splash-on .wrap{visibility:hidden}
     <div class="gcol gl">
       <div class="card" id="prog-card"><h2 id="prog-greet">Your progress</h2><div class="stats" id="prog-stats"></div></div>
       <div class="card" id="grade-card"></div>
-      <div class="card" id="goal-card">
-        <h2>Daily goal</h2>
-        <div class="stats" id="goal-stats"></div>
-        <div><label for="goal">Words to answer each day</label><input type="number" id="goal" min="1" max="100" step="1"></div>
-        <p class="note">A day counts towards your streak when you reach the goal.</p>
-      </div>
       <div class="card" id="coach-card">
         <h2>How you're doing and how to improve</h2>
         <p id="coach-out" class="note">Claude reads your answers and results, then explains where your understanding is strong, where it slips, and what to do about it.</p>
@@ -830,48 +902,6 @@ body.splash-on .wrap{visibility:hidden}
     </div>
     <div class="gcol gr">
       <div class="card" id="badge-card"><h2 id="badge-head">Badges</h2><p class="note">Tap a badge to see how to earn it.</p><div class="bgrid" id="badge-grid"></div></div>
-      <div class="card" id="backup-card">
-        <h2>Back up and move your progress</h2>
-        <p class="note">Save your progress, your own words and your pictures to one file. Load that file on another device to carry everything across, or to get it back after clearing the browser.</p>
-        <p class="note" id="store-info"></p>
-        <div class="row"><button class="btn primary" id="bk-save">Save backup</button><button class="btn" id="bk-load">Load backup</button></div>
-        <input type="file" id="bk-file" accept=".json,application/json" hidden>
-        <p class="note" id="bk-msg" role="status" hidden></p>
-      </div>
-      <div class="card" id="ai-card" hidden>
-        <h2>Automatic marking</h2>
-        <p class="note">Let Claude mark your typed answers, like the Claude version does. It uses your own Anthropic API key, kept only on this device. Each answer costs a tiny fraction of a penny.</p>
-        <div id="ai-off">
-          <ol class="steps">
-            <li>Go to <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> and sign up or sign in. This is separate from your Claude app account.</li>
-            <li>Under <b>Billing</b>, add a small amount of credit, and set a monthly spending limit if you like.</li>
-            <li>Under <b>API keys</b>, tap <b>Create key</b>, name it "Word Trainer" and copy it. It starts with <code>sk-ant-</code>.</li>
-            <li>Paste it below and tap Save and test. Do the same on each device.</li>
-          </ol>
-          <div><label for="ai-key">Anthropic API key</label><input type="password" id="ai-key" autocomplete="off" spellcheck="false" placeholder="sk-ant-..."></div>
-          <div class="row"><button class="btn primary" id="ai-save">Save and test</button></div>
-        </div>
-        <div id="ai-on" hidden><div class="row"><button class="btn" id="ai-test">Test it</button><button class="btn" id="ai-remove">Remove key from this device</button></div></div>
-        <p class="note" id="ai-msg" role="status"></p>
-      </div>
-      <div class="card" id="sync-card" hidden>
-        <h2>Sync between your devices</h2>
-        <div id="sync-off">
-          <p class="note">Keep your progress, own words and pictures the same on your tablet, phone and PC. Everything is stored in a private file in your own GitHub account.</p>
-          <ol class="steps">
-            <li>Open <a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=Word%20Trainer%20sync" target="_blank" rel="noopener">this GitHub page</a> (sign in if asked).</li>
-            <li>Set <b>Expiration</b> to <b>No expiration</b>. Leave only <b>gist</b> ticked.</li>
-            <li>Tap <b>Generate token</b> at the bottom, then copy the code that starts with <code>ghp_</code>.</li>
-            <li>Paste it below and tap Connect. Do the same on each device.</li>
-          </ol>
-          <div><label for="sync-token">Access code</label><input type="password" id="sync-token" autocomplete="off" spellcheck="false" placeholder="ghp_..."></div>
-          <div class="row"><button class="btn primary" id="sync-connect">Connect</button></div>
-        </div>
-        <div id="sync-on" hidden>
-          <div class="row"><button class="btn primary" id="sync-now">Sync now</button><button class="btn" id="sync-disc">Disconnect this device</button></div>
-        </div>
-        <p class="note" id="sync-msg" role="status"></p>
-      </div>
     </div>
   </section>
 
@@ -3666,8 +3696,15 @@ function save(){
   }
 }
 
-/* Practice runs in sets of 4 words from one category. A word is done when it is answered right twice in a row with no hint. */
-const SET_SIZE = 4, NEED = 2;
+/* Settings tab: this device's preferences, kept apart from progress (S) */
+const PREF_DEF = {setSize:4, need:2, hints:true, hide:[], fcTestN:20, fcFlip:false, spSecs:60, wmShort:false, vol:1, hearVoice:"", hearRate:.85, text:1, motion:false, rain:"on", pops:true};
+const PREF = Object.assign({}, PREF_DEF);
+try { const p = JSON.parse(localStorage.getItem("wt-settings") || "{}"); for (const k in PREF_DEF) if (k in p && typeof p[k] === typeof PREF_DEF[k]) PREF[k] = p[k]; } catch(e){}
+const prefSave = () => { try { localStorage.setItem("wt-settings", JSON.stringify(PREF)); } catch(e){} };
+
+/* Practice runs in sets of words from one category (4 unless changed in Settings). A word is done when it is answered right twice in a row (or three times) with no hint. */
+let SET_SIZE = PREF.setSize, NEED = PREF.need;
+const needTxt = () => NEED === 2 ? "twice" : "three times";
 const byKey = k => allWords().find(w => key(w) === k);
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 function buildSet(cat, force){
@@ -3685,7 +3722,8 @@ function ensureSet(force){
     if (!S.set.words.length || !topicFits(S.set.topic)) S.set = null;
   }
   if (S.set) return S.set;
-  const cats = !S.topic ? ts.filter(t => !deckOfTopic(t)) : S.topic.startsWith("deck:") ? ts.filter(t => deckOfTopic(t) === S.topic.slice(5)) : ts.includes(S.topic) ? [S.topic] : ts.filter(t => !deckOfTopic(t));
+  let cats = !S.topic ? ts.filter(t => !deckOfTopic(t)) : S.topic.startsWith("deck:") ? ts.filter(t => deckOfTopic(t) === S.topic.slice(5)) : ts.includes(S.topic) ? [S.topic] : ts.filter(t => !deckOfTopic(t));
+  if (!S.topic){ const vis = cats.filter(t => !PREF.hide.includes(t)); if (vis.length) cats = vis; }
   for (const c of cats){ const st = buildSet(c, false); if (st){ S.set = st; return st; } }
   if (force) S.set = buildSet(cats[0], true);
   return S.set;
@@ -3742,7 +3780,8 @@ function speak(word){
   tts(word);
 }
 function tts(word){
-  try { const u = new SpeechSynthesisUtterance(word); u.lang = /[\u0600-\u06FF]/.test(word) ? "ar-SA" : "en-GB"; u.rate = .85; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch(e){}
+  try { const u = new SpeechSynthesisUtterance(word); u.lang = /[\u0600-\u06FF]/.test(word) ? "ar-SA" : "en-GB"; u.rate = PREF.hearRate;
+    const hv = !/[\u0600-\u06FF]/.test(word) && PREF.hearVoice && speechSynthesis.getVoices().find(v => v.name === PREF.hearVoice); if (hv){ u.voice = hv; u.lang = hv.lang; } speechSynthesis.cancel(); speechSynthesis.speak(u); } catch(e){}
 }
 const webLinks = w => { const q = encodeURIComponent(w.word); return `<a class="btn small" href="https://www.google.com/search?q=${q}+meaning" target="_blank" rel="noopener">Search online</a><a class="btn small" href="https://www.google.com/search?tbm=isch&q=${q}" target="_blank" rel="noopener">Find pictures</a>${w.deck ? "" : `<a class="btn small" href="https://www.merriam-webster.com/dictionary/${q}" target="_blank" rel="noopener">Merriam-Webster</a>`}`; };
 const hearBtn = w => canSpeak || (w.d && w.d.a && !OFFLINE) ? `<button class="btn small" data-speak="${esc(w.word)}">Hear it</button>` : "";
@@ -3777,7 +3816,7 @@ function renderPractice(keep){
   }
   if (mode === "setdone"){
     c.innerHTML = `<h2>Set complete</h2>
-      <p>You got each of these right twice in a row in ${esc(S.set.topic)}:</p>
+      <p>You got each of these right ${needTxt()} in a row in ${esc(S.set.topic)}:</p>
       <div class="chips">${S.set.words.map(k => byKey(k)).filter(Boolean).map(w => `<span class="pill known">${esc(w.word)}</span>`).join("")}</div>
       <p class="note">They will come back later for a quick check so they stick.</p>
       <div class="row"><button class="btn primary" data-act="newset">Next 4 words</button></div>`;
@@ -3800,7 +3839,7 @@ function renderPractice(keep){
       ${hints ? `<div class="hints">${hl.slice(0,hints).map(x => `<p class="hint">${esc(x)}</p>`).join("")}<p class="note">With a hint, the best mark is partly right.</p></div>` : ""}
       <div class="row">
         <button class="btn primary" data-act="check" ${busy ? "disabled" : ""}>${busy ? "Checking your answer…" : "Check my answer"}</button>
-        ${busy ? `<button class="btn" data-act="stop">Stop</button>` : `${hl.length ? `<button class="btn" data-act="hint" ${hints >= hl.length ? "disabled" : ""}>${hints ? "Another hint" : "Hint"}</button>` : ""}<button class="btn" data-act="dunno">I don't know</button>`}
+        ${busy ? `<button class="btn" data-act="stop">Stop</button>` : `${hl.length && PREF.hints ? `<button class="btn" data-act="hint" ${hints >= hl.length ? "disabled" : ""}>${hints ? "Another hint" : "Hint"}</button>` : ""}<button class="btn" data-act="dunno">I don't know</button>`}
       </div>
       <p class="err" id="ask-err" hidden></p>`;
   } else if (mode === "self"){
@@ -3820,7 +3859,7 @@ function renderPractice(keep){
         ${sent.err ? `<p class="err">${esc(sent.err)}</p>` : ""}`;
       h += `</div>`;
     }
-    h += `<p class="note">${(st.streak[key(cur)]|0) >= NEED ? "This word is done for this set: right twice in a row." : result.verdict === "correct" ? "Right once. Get it right once more in a row and this word is done." : "This word stays in the set until you get it right twice in a row without a hint."}</p>
+    h += `<p class="note">${(st.streak[key(cur)]|0) >= NEED ? "This word is done for this set: right " + needTxt() + " in a row." : result.verdict === "correct" ? ((st.streak[key(cur)]|0) === 1 ? "Right once. " : "Right " + (st.streak[key(cur)]|0) + " times. ") + "Get it right " + (NEED - (st.streak[key(cur)]|0) === 1 ? "once more" : "twice more") + " in a row and this word is done." : "This word stays in the set until you get it right " + needTxt() + " in a row without a hint."}</p>
       <div class="row"><button class="btn primary" data-act="next">Next word</button>${result.auto && undoSnap ? (result.verdict === "correct" ? `<button class="btn" data-act="overrule" data-v="incorrect">Actually I was wrong</button>` : `<button class="btn" data-act="overrule" data-v="correct">I think I was right</button>`) : ""}</div>`;
   }
   const cut = h.indexOf("<!--SPLIT-->");
@@ -4711,7 +4750,7 @@ function syncClaude(){
     out.textContent = "Claude reads your answers and results, then explains where your understanding is strong, where it slips, and what to do about it."; }
 }
 
-const VIEWS = ["hub","home","practice","cards","words","grade","play","wm","speed"];
+const VIEWS = ["hub","home","practice","cards","words","grade","play","wm","speed","settings"];
 function show(tab){
   for (const t of VIEWS){ $("view-"+t).hidden = t !== tab; if ($("tab-"+t)) $("tab-"+t).classList.toggle("on", t === tab); }
   if (tab !== "play" && typeof play === "object") play.on = false;
@@ -4721,8 +4760,9 @@ function show(tab){
   if (tab !== "wm" && typeof wm === "object" && wm.g) wmAbort();
   if (tab === "wm") wmLobby();
   if (tab === "hub") renderHub();
-  document.querySelector(".meter").hidden = ["home", "play", "hub", "wm", "speed"].includes(tab);
-  document.body.classList.toggle("grade-on", tab === "grade");
+  document.querySelector(".meter").hidden = ["home", "play", "hub", "wm", "speed", "settings"].includes(tab);
+  document.body.classList.toggle("grade-on", tab === "grade"); document.body.classList.toggle("set-on", tab === "settings");
+  if (tab === "settings") renderSettings(); else if ($("set-vox")) $("set-vox").innerHTML = "";
   const rainy = ["home", "hub", "wm", "speed"].includes(tab); document.body.classList.toggle("home-on", rainy); if ($("splash").hidden) setRain(rainy);
   if (tab === "home") renderHome();
   if (tab === "grade"){ renderProg(); renderCatGrades(); }
@@ -4855,13 +4895,14 @@ document.addEventListener("keydown", e => { if (play.on && !$("view-play").hidde
 $("play-back").onclick = () => show("home");
 
 /* Speed round: 60 seconds of quick-fire meanings, tap the word from 4. It keeps its own bests and never changes your progress. */
-const SP_T = 60000, SP_PEN = 3000, SP_RUN = 5;
+let SP_T = PREF.spSecs*1000; const SP_PEN = 3000, SP_RUN = 5;
+const spSuf = () => SP_T === 60000 ? "" : "@" + SP_T/1000;   // other lengths keep their own bests
 const sp = {topic:"", on:false, g:null, tick:null, t:null, side:null};
 try { sp.topic = localStorage.getItem("wt-sp-topic") || ""; } catch(e){}
 const bestMerge = (a, b) => { a = a || {}; for (const t in b || {}){ const x = a[t] || {best:0, plays:0}, y = b[t]; a[t] = {best:Math.max(x.best, y.best), plays:Math.max(x.plays, y.plays)}; } return a; };
-const spKey = t => t || "*";   // "*" = all subjects
+const spKey = t => (t || "*") + spSuf();   // "*" = all subjects
 const spBest = t => (((S.games || {}).sp || {})[spKey(t)]) || {best:0, plays:0};
-const spTop = () => Math.max(0, ...Object.values((S.games || {}).sp || {}).map(x => x.best));
+const spTop = () => Math.max(0, ...Object.entries((S.games || {}).sp || {}).filter(([k]) => spSuf() ? k.endsWith(spSuf()) : !k.includes("@")).map(([, x]) => x.best));
 const spPool = t => allWords().filter(w => !w.deck && w.def && (!t || w.topic === t));
 function spSide(qm, you, ms){
   clearTimeout(sp.side);
@@ -4872,8 +4913,8 @@ function spStop(){ sp.on = false; clearInterval(sp.tick); clearTimeout(sp.t); cl
 function spMenu(){
   spStop(); spSide("curious", "idle");
   const ts = wmTopics(); if (sp.topic && !ts.includes(sp.topic)) sp.topic = "";
-  $("sp-area").innerHTML = `<div class="pbox"><p class="sp-big">60</p><h3 class="wm-h">Beat the clock</h3>
-    <p class="note">A meaning appears: tap the word it describes, as many as you can in 60 seconds. Get ${SP_RUN} right in a row and every answer after that is worth double until you miss. A wrong answer costs 3 seconds, so think before you tap.</p>
+  $("sp-area").innerHTML = `<div class="pbox"><p class="sp-big">${SP_T/1000}</p><h3 class="wm-h">Beat the clock</h3>
+    <p class="note">A meaning appears: tap the word it describes, as many as you can in ${SP_T/1000} seconds. Get ${SP_RUN} right in a row and every answer after that is worth double until you miss. A wrong answer costs 3 seconds, so think before you tap.</p>
     <label class="wm-lab">Subject <select id="sp-topic"><option value="">All subjects</option>${ts.map(t => `<option ${t === sp.topic ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label>
     <p class="sp-bests"><span>Your best here: <b>${spBest(sp.topic).best}</b></span><span>Best overall: <b>${spTop()}</b></span></p>
     <div class="row" style="justify-content:center"><button class="btn primary" id="sp-go">Start the clock</button></div>
@@ -4883,7 +4924,7 @@ function spMenu(){
 }
 function spStart(){
   const pool = spPool(sp.topic); if (pool.length < 4){ toast("Not enough words in this subject yet."); return; }
-  sp.g = {left:SP_T, last:performance.now(), sec:60, score:0, run:0, bestRun:0, n:0, right:0, miss:[], order:shuffle(pool), i:0, lock:false};
+  sp.g = {left:SP_T, last:performance.now(), sec:SP_T/1000, score:0, run:0, bestRun:0, n:0, right:0, miss:[], order:shuffle(pool), i:0, lock:false};
   sp.on = true; clearInterval(sp.tick); sp.tick = setInterval(spTick, 100); spSide("ask", "idle"); spAsk();
 }
 // three wrong words from the same subject, of similar length, so the right one doesn't stand out
@@ -4966,6 +5007,8 @@ const WM_OPP = [
   {id:"galen", name:"Galen", lvl:"Specialist", blurb:"The great physician of Pergamon. Precise, brisk and a bit of a know-it-all.", skill:.64, pass:.22, speed:1, spec:["Body and medicine", "Plants and animals"], weak:["Witchcraft and the occult"], hi:.9, lo:.42}];
 const wmSpec = (o, t) => !!(o.spec && o.spec.includes(t));
 const wmSkill = (o, w) => wmSpec(o, w.topic) ? o.hi : o.weak && o.weak.includes(w.topic) ? o.lo : o.skill;
+const wmLen = () => PREF.wmShort ? .5 : 1;
+const wmDur = r => { const t = WM_ROUNDS[r].s*wmLen(); return t >= 120 && t % 60 === 0 ? t/60 + " minutes" : t + " seconds"; };
 const WM_ROUNDS = [{n:"Specialist subject", s:120}, {n:"General knowledge", s:120}, {n:"The final", s:60}];
 const WM_STEPS = [[0, "opp"], [0, "you"], [1, "opp"], [1, "you"], [2, "opp"], [2, "you"]];
 const WM_POSE = ["idle", "right", "wrong", "sweat", "angry", "excited", "win", "lose"];
@@ -5075,7 +5118,7 @@ function voxStatus(){
   const el = $("wm-voxst"); if (!el) return;
   if (vox.state === "none" && !vox.p && $("wm-vsel") && $("wm-vsel").querySelector('[value="__piper"]')) return wmVoxUI();   // not on this site: take it off the list
   if (!wm.piper || (vox.state === "none" && !vox.p)) return;
-  el.textContent = vox.state === "ready" ? "Studio voice (Alan)" : vox.state === "none" ? "Studio voice couldn't finish downloading, so the browser voice is speaking. It will try again next time." : "Studio voice (Alan) downloading " + Math.round(vox.p*100) + "%. The browser voice speaks until it's ready.";
+  el.textContent = vox.state === "ready" ? "Studio voice (Alan)" : !vox.w && vox.state === "" ? "Studio voice (Alan). It downloads the first time you open Word Master." : vox.state === "none" ? "Studio voice couldn't finish downloading, so the browser voice is speaking. It will try again next time." : "Studio voice (Alan) downloading " + Math.round(vox.p*100) + "%. The browser voice speaks until it's ready.";
 }
 
 function wmSayBrowser(t){
@@ -5092,9 +5135,10 @@ function wmSay(t, force){
   wmHush(); t = t.replace(/_{3,}/g, "blank");
   if (voxOn() && vox.state === "ready") voxSay(t); else wmSayBrowser(t);
 }
+const wmVoxBox = () => $("wm-vox") || $("set-vox");
 function wmVoxUI(){
-  const box = $("wm-vox"); if (!box) return;
-  if (wm.piper) voxLoad();
+  const box = wmVoxBox(); if (!box) return;
+  if (wm.piper && box.id === "wm-vox") voxLoad();   // the download starts in the Word Master lobby, not from Settings
   const vs = wmVoices(), cur = wmPickVoice(), en = vs.filter(v => /^en/i.test(v.lang)).sort((a, b) => wmRank(b) - wmRank(a)), other = vs.filter(v => !/^en/i.test(v.lang));
   const studio = vox.state !== "none" || vox.p, pip = studio && wm.piper;
   const opt = v => `<option value="${esc(v.name)}" ${!pip && cur && v.name === cur.name ? "selected" : ""}>${esc(v.name)} (${esc(v.lang)})</option>`;
@@ -5106,13 +5150,13 @@ function wmVoxUI(){
   voxStatus();
   if (!studio && !vs.length) return;
   const prev = () => wmSay("Welcome to Word Master. Which word means the open public square of an ancient Greek city?", true);
-  $("wm-vsel").onchange = e => { const p = e.target.value === "__piper"; wm.piper = p; if (!p) wm.vname = e.target.value; wmVoxSave(); wmVoxUI(); $("wm-vox").open = true; prev(); };
+  $("wm-vsel").onchange = e => { const p = e.target.value === "__piper"; wm.piper = p; if (!p) wm.vname = e.target.value; wmVoxSave(); wmVoxUI(); wmVoxBox().open = true; prev(); };
   $("wm-rate").onchange = e => { wm.rate = +e.target.value; wmVoxSave(); prev(); };
   $("wm-pitch").onchange = e => { wm.pitch = +e.target.value; wmVoxSave(); prev(); };
   $("wm-vtest").onclick = prev;
-  $("wm-vreset").onclick = () => { wm.vname = ""; wm.piper = true; wm.rate = 1; wm.pitch = .9; wmVoxSave(); wmVoxUI(); $("wm-vox").open = true; prev(); };
+  $("wm-vreset").onclick = () => { wm.vname = ""; wm.piper = true; wm.rate = 1; wm.pitch = .9; wmVoxSave(); wmVoxUI(); wmVoxBox().open = true; prev(); };
 }
-try { speechSynthesis.addEventListener("voiceschanged", () => { const b = $("wm-vox"); if (b && !b.open) wmVoxUI(); }); } catch(e){}
+try { speechSynthesis.addEventListener("voiceschanged", () => { const b = wmVoxBox(); if (b && (!b.open || b.id === "set-vox")) wmVoxUI(); }); } catch(e){}
 // how long until Socrates finishes what he's saying (a line still being made counts as speaking)
 function wmTalkLeft(){
   let ms = vox.want ? 300 : 0;
@@ -5180,7 +5224,7 @@ function wmLobby(){
   const champs = Object.keys(st.champ);
   const oppCard = o => `<button class="wm-opp${o.id === wm.opp ? " on" : ""}" data-opp="${o.id}"><img src="${wmImg(o.id, "idle")}" alt=""><b>${o.name}</b><span class="lv ${o.lvl.toLowerCase()}">${o.lvl}</span><span class="bl">${o.blurb}</span>${o.spec ? `<span class="spec"><b>Strong:</b> ${o.spec.map(esc).join(", ")}<br><b>Weak:</b> ${o.weak.map(esc).join(", ")}</span>` : ""}<span class="rec">Your record: ${rec(o.id)}</span></button>`;
   wmUi(`<div class="wmc"><h3 class="wm-h">Welcome to Word Master</h3>
-    <p class="wm-rules">Socrates reads out a meaning and you type the word. <b>Round 1:</b> 2 minutes on your specialist subject. <b>Round 2:</b> 2 minutes of general knowledge. <b>The final:</b> 60 seconds on the words you got wrong or passed. One or two wrong letters still count, and the clock stops while your answer is checked.</p>
+    <p class="wm-rules">Socrates reads out a meaning and you type the word. <b>Round 1:</b> ${wmDur(0)} on your specialist subject. <b>Round 2:</b> ${wmDur(1)} of general knowledge. <b>The final:</b> ${wmDur(2)} on the words you got wrong or passed. One or two wrong letters still count, and the clock stops while your answer is checked.</p>
     <label class="wm-lab">Specialist subject <select id="wm-topic">${ts.map(t => `<option ${t === wm.topic ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label>
     <p class="wm-lab">Choose your rival</p>
     <div class="wm-opps">${WM_OPP.filter(o => !o.spec).map(oppCard).join("")}</div>
@@ -5220,7 +5264,7 @@ function wmNextTurn(){
   const g = wm.g; if (!g || g.dead) return;
   g.step++; if (g.step >= WM_STEPS.length) return wmEnd();
   const [r, who] = WM_STEPS[g.step], nm = who === "you" ? "You" : g.opp.name;
-  Object.assign(g, {round:r, who, run:0, bad:0, rq:0, left:WM_ROUNDS[r].s*1000, timeUp:false, running:false, skip:false, nerve:null});
+  Object.assign(g, {round:r, who, run:0, bad:0, rq:0, left:WM_ROUNDS[r].s*1000*wmLen(), timeUp:false, running:false, skip:false, nerve:null});
   wmLight(false); wmBoard(); wmCB(""); wmMode(false); wmCon(wmCid(who), "idle");
   if (r === 2){
     g.final[who] = [...new Set(g.missed[who])];
@@ -5239,7 +5283,7 @@ function wmNextTurn(){
     setTimeout(() => { if (g.dead || wm.g !== g) return; wmLight(true); wmCpuTurn(); }, g.skip ? 200 : 2600);
   } else {
     const ot = wmTot(g, "opp"), yt = wmTot(g, "you");
-    wmUi(`<div class="wm-msg"><p class="wm-kick">Round ${r + 1} · ${esc(subj)}</p><h3 class="wm-h">Your turn in the black chair</h3><p class="wm-rules">${r === 2 ? "60 seconds on the words you got wrong or passed." : "Two minutes."} ${esc(g.opp.name)} has ${ot} point${ot === 1 ? "" : "s"}, you have ${yt}.</p><button class="btn primary" id="wm-ready">I'm ready: start the clock</button></div>`);
+    wmUi(`<div class="wm-msg"><p class="wm-kick">Round ${r + 1} · ${esc(subj)}</p><h3 class="wm-h">Your turn in the black chair</h3><p class="wm-rules">${r === 2 ? wmDur(2) + " on the words you got wrong or passed." : wmDur(r).replace(/^./, c => c.toUpperCase()) + "."} ${esc(g.opp.name)} has ${ot} point${ot === 1 ? "" : "s"}, you have ${yt}.</p><button class="btn primary" id="wm-ready">I'm ready: start the clock</button></div>`);
     $("wm-ready").onclick = () => { wmLight(true); wmYouAsk(); }; $("wm-ready").focus();
   }
 }
@@ -5445,7 +5489,7 @@ function checkBadges(){
     if (topics().filter(t => !deckOfTopic(t)).some(t => { const c = catStats(t); return c.n && c.k === c.n; })) award("category-master");
     if (typeof pics === "object" && Object.keys(pics).length >= 10) award("picture-perfect");
     if (S.custom.length >= 1) award("storyteller");
-    const gm = S.games || {}; if (Object.values(gm.mc || {}).some(x => x.best >= PLAY_N) || Object.values(gm.sp || {}).some(x => x.best >= 30)) award("quiz-master");
+    const gm = S.games || {}; if (Object.values(gm.mc || {}).some(x => x.best >= PLAY_N) || Object.entries(gm.sp || {}).some(([k, x]) => !/@90$/.test(k) && x.best >= 30)) award("quiz-master");
     if (S.wm && Object.keys(S.wm.champ || {}).length) award("wm-champion");
   } finally { bchecking = false; }
 }
@@ -5486,6 +5530,7 @@ function rainFrame(){
   requestAnimationFrame(rainFrame);
 }
 function setRain(on){
+  if (PREF.rain === "off") on = false;
   document.body.classList.toggle("rainy", on);
   if (on && !rain.on){ rainSize(); rain.on = !calm(); if (rain.on) requestAnimationFrame(rainFrame); else { const x = $("rain").getContext("2d"); x.font = rain.fs + "px 'Share Tech Mono', monospace"; x.fillStyle = "rgba(43,255,136,.25)"; for (const c of rain.cols) x.fillText(c.w, c.x, c.y); } }
   if (!on) rain.on = false;
@@ -5497,7 +5542,8 @@ $("enter-btn").onclick = () => { $("splash").hidden = true; document.body.classL
 let sfxOn = true, sfxCtx = null;
 try { sfxOn = localStorage.getItem("wt-sound") !== "off"; } catch(e){}
 function syncSndBtn(){ $("snd-btn").textContent = sfxOn ? "Sound on" : "Sound off"; $("snd-btn").setAttribute("aria-pressed", sfxOn); }
-$("snd-btn").onclick = () => { sfxOn = !sfxOn; try { localStorage.setItem("wt-sound", sfxOn ? "on" : "off"); } catch(e){} syncSndBtn(); if (sfxOn) sfx("correct"); };
+function setSound(on){ sfxOn = on; try { localStorage.setItem("wt-sound", sfxOn ? "on" : "off"); } catch(e){} syncSndBtn(); if (sfxOn) sfx("correct"); }
+$("snd-btn").onclick = () => setSound(!sfxOn);
 const SFX = {correct:[[784,0,.12,"triangle"],[1047,.09,.22,"triangle"]], partial:[[659,0,.2,"triangle"]], incorrect:[[233,0,.16,"sine"],[196,.13,.26,"sine"]], flip:[[520,0,.06,"sine"]], tick:[[1250,0,.035,"square"]], buzz:[[98,0,.75,"sawtooth"],[104,0,.75,"sawtooth"]], light:[[70,0,.35,"sine"],[150,0,.12,"square"]], win:[[523,0,.14,"triangle"],[659,.1,.14,"triangle"],[784,.2,.14,"triangle"],[1047,.3,.4,"triangle"]]};
 function sfx(name){
   if (!sfxOn || !SFX[name]) return;
@@ -5506,14 +5552,14 @@ function sfx(name){
     const t0 = sfxCtx.currentTime + .02;
     for (const [f, at, len, type] of SFX[name]){
       const o = sfxCtx.createOscillator(), g = sfxCtx.createGain(); o.type = type; o.frequency.value = f;
-      g.gain.setValueAtTime(0, t0 + at); g.gain.linearRampToValueAtTime(name === "incorrect" ? .12 : .18, t0 + at + .015); g.gain.exponentialRampToValueAtTime(.001, t0 + at + len);
+      g.gain.setValueAtTime(0, t0 + at); g.gain.linearRampToValueAtTime((name === "incorrect" ? .12 : .18)*PREF.vol, t0 + at + .015); g.gain.exponentialRampToValueAtTime(.001, t0 + at + len);
       o.connect(g); g.connect(sfxCtx.destination); o.start(t0 + at); o.stop(t0 + at + len + .05);
     }
   } catch(e){}
 }
 
 /* Celebrations: a burst of confetti and a short message */
-const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const calm = () => PREF.motion || matchMedia("(prefers-reduced-motion: reduce)").matches;
 let toastT = null;
 function toast(msg){ const t = $("toast"); t.textContent = msg; t.hidden = false; t.classList.remove("in"); void t.offsetWidth; t.classList.add("in"); clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3200); }
 function celebrate(msg){
@@ -5546,6 +5592,7 @@ function charFor(t, ok){
 }
 let charT = null;
 function charPop(ok){
+  if (!PREF.pops) return;
   clearTimeout(charT); document.querySelectorAll(".sidepop").forEach(x => x.remove());
   const img = charFor(cards.topic, ok), side = document.querySelector(ok ? ".cside.knew" : ".cside.miss"), pop = $("charpop");
   if (pop){ pop.innerHTML = ""; pop.className = "charpop"; }
@@ -5651,18 +5698,19 @@ function cardsRender(){
   }
   const pend = cards.pendingPop; cards.pendingPop = null; cards.popped = false;
   cards.cur = w; cards.phase = "ask"; cards.verdict = null; cards.fb = ""; cards.typed = "";
+  const flipOnly = PREF.fcFlip && cards.mode === "study";
   const r = f.c[key(w)], tag = cards.mode === "test" ? "" : !r ? `<span class="ctag new">New</span>` : r.s === 2 ? `<span class="ctag due">Review</span>` : `<span class="ctag lrn">Learning</span>`;
   area.innerHTML = `<div class="cwrap">${fcSide("miss", "👎 Didn't know", cards.again)}<div class="cmain">
     <div class="cstage"><div class="fcard" id="fcard" tabindex="0" role="button" aria-label="Flashcard. Type your answer and press Enter, or tap to flip.">
-      <div class="face front">${tag}<div class="pos">${esc(w.pos)}</div><p class="head"><span>${esc(w.word)}</span></p><p class="note">Type what it means below, then press Enter</p></div>
+      <div class="face front">${tag}<div class="pos">${esc(w.pos)}</div><p class="head"><span>${esc(w.word)}</span></p><p class="note">${flipOnly ? "Think of the meaning, then flip" : "Type what it means below, then press Enter"}</p></div>
       <div class="face back">${picHTML(w)}<p class="cword">${esc(w.word)}</p>${w.kid ? `<p class="ckid">${esc(w.kid)}</p>` : ""}<p class="cdef">${esc(w.def)}</p></div>
     </div><div class="hint-l">${cards.mode === "test" ? "Next" : "Again"}</div><div class="hint-r">${cards.mode === "test" ? "Next" : "Good"}</div><div class="charpop" id="charpop" aria-hidden="true"></div></div>
-    <div class="fc-type"><input id="fc-input" type="text" autocomplete="off" spellcheck="true" placeholder="Type what it means, then press Enter to flip" aria-label="Your answer"><kbd class="kenter">Enter ⏎ flip</kbd></div>
+    <div class="fc-type"${flipOnly ? " hidden" : ""}><input id="fc-input" type="text" autocomplete="off" spellcheck="true" placeholder="Type what it means, then press Enter to flip" aria-label="Your answer"><kbd class="kenter">Enter ⏎ flip</kbd></div>
     <div id="fc-result" aria-live="polite"></div>
     <div class="row cbtns" id="fc-btns"></div></div>${fcSide("knew", "Knew it 👍", cards.good)}</div>`;
   fcButtons(); cardsDrag($("fcard"));
   $("fc-input").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); e.stopPropagation(); cardsFlip(); } });
-  $("fc-input").focus({preventScroll:true});
+  if (flipOnly) $("fcard").focus({preventScroll:true}); else $("fc-input").focus({preventScroll:true});
   if (pend != null) charPop(pend);
 }
 function fcButtons(){
@@ -5842,5 +5890,87 @@ document.body.classList.add("splash-on"); setRain(true); renderBadges(); checkBa
     } catch(e){}
   } catch(e){ $("save-note").hidden = false; }
 })();
+
+/* Settings tab */
+const PX = {   // settings that live elsewhere in the app
+  rev:{get:() => S.rev ? "m" : "w", set:v => setRev(v === "m")},
+  sound:{get:() => sfxOn, set:v => setSound(v)},
+  voice:{get:() => wm.voice, set:v => { wm.voice = v; wmPrefs(); wmVoiceBtn(); if (!v) wmHush(); }},
+  watch:{get:() => wm.watch, set:v => { wm.watch = v; wmPrefs(); }},
+  newDay:{get:() => fcNewDay(), set:v => { fcS().newDay = +v; save(); }}
+};
+const pget = k => PX[k] ? PX[k].get() : PREF[k];
+function pset(k, v){
+  if (PX[k]) PX[k].set(v);
+  else { PREF[k] = typeof PREF_DEF[k] === "number" ? +v : typeof PREF_DEF[k] === "boolean" ? (v === true || v === "true") : v; prefSave(); applyPrefs(); }
+  renderSettings();
+}
+function applyPrefs(){
+  SET_SIZE = PREF.setSize; NEED = PREF.need; FC.testN = PREF.fcTestN; SP_T = PREF.spSecs*1000;
+  document.documentElement.style.setProperty("--ts", PREF.text);
+  document.body.classList.toggle("calm", PREF.motion); document.body.classList.toggle("rain-light", PREF.rain === "light");
+  if (rain.on && (PREF.rain === "off" || PREF.motion)){ setRain(false); setRain(document.body.classList.contains("home-on") && $("splash").hidden); }
+  else if (!rain.on && PREF.rain !== "off" && document.body.classList.contains("home-on") && $("splash").hidden){ document.body.classList.remove("rainy"); setRain(true); }
+}
+const segH = (k, opts) => `<div class="pseg" role="group">${opts.map(([v, l]) => `<button data-set="${k}" data-v="${v}" class="${String(pget(k)) === String(v) ? "on" : ""}" aria-pressed="${String(pget(k)) === String(v)}">${l}</button>`).join("")}</div>`;
+const chkH = (k, label) => `<label class="set-chk"><input type="checkbox" data-set="${k}" ${pget(k) ? "checked" : ""}> <span>${label}</span></label>`;
+const rowH = (title, body, note) => `<div class="set-row"><b>${title}</b>${body}${note ? `<p class="note">${note}</p>` : ""}</div>`;
+function renderSettings(){
+  if ($("wm-vox")) $("wm-vox").remove();   // the lobby's copy of the voice box; it is drawn again when the lobby opens
+  const ts = topics().filter(t => !deckOfTopic(t));
+  $("set-learn").innerHTML = `<h2>Learning</h2>
+    ${rowH("Words per practice set", segH("setSize", [[4, "4"], [6, "6"], [8, "8"]]), "Takes effect from your next new set.")}
+    ${rowH("A word is known when it's right", segH("need", [[2, "2 times in a row"], [3, "3 times in a row"]]))}
+    ${rowH("Practise in this direction", segH("rev", [["w", "Word → meaning"], ["m", "Meaning → word"]]))}
+    ${chkH("hints", "Show the Hint button in practice")}
+    ${rowH("Subjects in “Any category” practice", `<div class="set-hide">${ts.map(t => `<label class="set-chk"><input type="checkbox" data-hide="${esc(t)}" ${PREF.hide.includes(t) ? "" : "checked"}> <span>${esc(t)}</span></label>`).join("")}</div>`, "Untick a subject to leave it out when you practise any category. You can still pick it on its own.")}`;
+  $("set-cards").innerHTML = `<h2>Flashcards</h2>
+    ${rowH("New cards per day, per subject", segH("newDay", [[5, "5"], [10, "10"], [15, "15"], [20, "20"], [30, "30"]]))}
+    ${rowH("Cards in a test", segH("fcTestN", [[10, "10"], [20, "20"], [30, "30"]]))}
+    ${chkH("fcFlip", "In Study, just flip the card instead of typing an answer")}
+    ${chkH("pops", "Show character pop-ups when you answer")}`;
+  $("set-games").innerHTML = `<h2>Games</h2>
+    ${rowH("Speed Round length", segH("spSecs", [[30, "30 seconds"], [60, "60 seconds"], [90, "90 seconds"]]), "Each length keeps its own best scores, so they stay fair.")}
+    ${rowH("Word Master rounds", segH("wmShort", [[false, "Normal (2 min, 2 min, 60 s)"], [true, "Short (1 min, 1 min, 30 s)"]]))}
+    ${chkH("watch", "Watch my rival's turns in Word Master")}`;
+  const vs = (() => { try { return speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang)); } catch(e){ return []; } })();
+  $("set-sound").innerHTML = `<h2>Sound and voice</h2>
+    ${chkH("sound", "Sound effects")}
+    ${rowH("Sound effects volume", `<input type="range" min=".2" max="1.5" step=".1" value="${PREF.vol}" data-range="vol" aria-label="Sound effects volume">`)}
+    ${chkH("voice", "Socrates speaks in Word Master")}
+    <details class="wm-vox" id="set-vox" open></details>
+    ${rowH("“Hear it” voice for words", vs.length ? `<select data-sel="hearVoice"><option value="">Best for this device</option>${vs.map(v => `<option value="${esc(v.name)}" ${v.name === PREF.hearVoice ? "selected" : ""}>${esc(v.name)} (${esc(v.lang)})</option>`).join("")}</select>` : `<p class="note">This browser hasn't offered any voices yet.</p>`)}
+    ${rowH("“Hear it” speed", `<input type="range" min=".6" max="1.2" step=".05" value="${PREF.hearRate}" data-range="hearRate" aria-label="Hear it speed">`)}
+    <div class="row"><button class="btn small" id="set-hear">▶ Try “Hear it”</button></div>`;
+  $("set-display").innerHTML = `<h2>Display and comfort</h2>
+    ${rowH("Text size", segH("text", [[.9, "Small"], [1, "Normal"], [1.15, "Large"], [1.3, "Extra large"]]))}
+    ${rowH("Matrix rain", segH("rain", [["on", "On"], ["light", "Light"], ["off", "Off"]]))}
+    ${chkH("motion", "Reduce motion: no shaking, sliding or confetti")}
+    ${document.fullscreenEnabled ? `<div class="row"><button class="btn small" id="set-fs">${document.fullscreenElement ? "Exit full screen" : "Full screen"}</button></div>` : ""}`;
+  $("set-data").innerHTML = `<h2>Reset a subject</h2>
+    <p class="note">Start one subject again from scratch: its practice progress and flashcard schedule are cleared. Everything else stays. If you sync between devices, do the same on your other devices or the old progress may come back.</p>
+    <div class="row"><select id="set-reset-t" aria-label="Subject to reset">${ts.map(t => `<option>${esc(t)}</option>`).join("")}</select><button class="btn small" id="set-reset">Reset this subject</button></div>`;
+  wmVoxUI();
+  $("set-hear").onclick = () => tts("Hello. This is how words will sound.");
+  if ($("set-fs")) $("set-fs").onclick = () => { fsBtn.click(); setTimeout(renderSettings, 400); };
+  $("set-reset").onclick = () => {
+    const t = $("set-reset-t").value, ws = allWords().filter(w => w.topic === t);
+    if (!confirm("Reset all progress in " + t + "? This can't be undone (unless you have a backup).")) return;
+    for (const w of ws){ delete S.progress[key(w)]; if (S.fc && S.fc.c) delete S.fc.c[key(w)]; }
+    if (S.set && S.set.topic === t) S.set = null;
+    save(); renderGrade(); toast(t + " has been reset.");
+  };
+}
+$("view-settings").addEventListener("click", e => {
+  const b = e.target.closest("button[data-set]"); if (b) pset(b.dataset.set, b.dataset.v);
+});
+$("view-settings").addEventListener("change", e => {
+  const t = e.target;
+  if (t.matches("input[type=checkbox][data-set]")) pset(t.dataset.set, t.checked);
+  else if (t.matches("[data-hide]")){ const n = t.dataset.hide; PREF.hide = t.checked ? PREF.hide.filter(x => x !== n) : PREF.hide.concat(n); prefSave(); S.set = S.topic ? S.set : null; }
+  else if (t.matches("[data-range]")){ PREF[t.dataset.range] = +t.value; prefSave(); if (t.dataset.range === "vol") sfx("correct"); else tts("Hello."); }
+  else if (t.matches("[data-sel]")){ PREF[t.dataset.sel] = t.value; prefSave(); tts("Hello."); }
+});
+applyPrefs();
 </script>
 <script>if ("serviceWorker" in navigator) addEventListener("load", () => { navigator.serviceWorker.register("sw.js", {updateViaCache:"none"}).then(r => r.update()).catch(() => {}); let had = !!navigator.serviceWorker.controller, done = false; navigator.serviceWorker.addEventListener("controllerchange", () => { if (had && !done){ done = true; location.reload(); } had = true; }); });</script></body></html>
