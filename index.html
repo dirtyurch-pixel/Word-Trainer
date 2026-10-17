@@ -3644,6 +3644,18 @@ function wmVoxUI(){
   $("wm-vreset").onclick = () => { wm.vname = ""; wm.piper = true; wm.rate = 1; wm.pitch = .9; wmVoxSave(); wmVoxUI(); $("wm-vox").open = true; prev(); };
 }
 try { speechSynthesis.addEventListener("voiceschanged", () => { const b = $("wm-vox"); if (b && !b.open) wmVoxUI(); }); } catch(e){}
+// how long until Socrates finishes what he's saying (a line still being made counts as speaking)
+function wmTalkLeft(){
+  let ms = vox.want ? 300 : 0;
+  if (vox.ctx && vox.srcs.length) ms = Math.max(ms, (vox.at - vox.ctx.currentTime)*1000);
+  try { if (speechSynthesis.speaking) ms = Math.max(ms, 150); } catch(e){}
+  return ms;
+}
+// wait at least min ms, then until he has finished (never more than 9 s)
+const wmAfterTalk = min => new Promise(res => {
+  const t0 = performance.now(), go = () => { const g = wm.g, el = performance.now() - t0; if (!g || g.dead || g.skip || el > 9000 || (el >= min && wmTalkLeft() <= 0)) res(); else setTimeout(go, 100); };
+  setTimeout(go, min);
+});
 const wmHush = () => { try { speechSynthesis.cancel(); } catch(e){} voxStop(); };
 function wmVoiceBtn(){ $("wm-voice").textContent = wm.voice ? "Voice on" : "Voice off"; $("wm-voice").setAttribute("aria-pressed", wm.voice); }
 $("wm-voice").onclick = () => { wm.voice = !wm.voice; wmPrefs(); wmVoiceBtn(); if (!wm.voice) wmHush(); };
@@ -3761,10 +3773,13 @@ function wmQList(who){
   return g.qs[k];
 }
 // get Socrates' next question ready while this one is being answered
+const wmAnsLine = (kind, w) => (kind === "pass" ? "Pass. " : "No. ") + "It's " + w.word + ".";
 const wmPrepNext = who => { const n = wmQList(who).list[0]; if (n && !((wm.g.skip || !wm.watch) && who === "opp")) voxPrep(wmClue(n)); };
 function wmNextQ(who){
   const g = wm.g, q = wmQList(who); if (!q.list.length){ if (!q.pool) return null; q.list = shuffle(q.pool); }
-  const w = q.list.shift(); g.used.add(key(w)); wmPrepNext(who); return w;
+  const w = q.list.shift(); g.used.add(key(w));
+  if (!((g.skip || !wm.watch) && who === "opp")){ voxPrep(wmAnsLine("wrong", w)); voxPrep(wmAnsLine("pass", w)); }
+  wmPrepNext(who); return w;
 }
 function wmYouAsk(){
   const g = wm.g; if (!g || g.dead) return;
@@ -3786,7 +3801,7 @@ function wmYouAnswer(pass){
   fb.className = "wm-fb " + (ok ? "ok" : "no");
   fb.innerHTML = ok ? "✓ Correct" + (norm(a) !== norm(w.word) ? ` (it's spelled <b>${esc(w.word)}</b>)` : "") : (pass ? "Pass. " : "✗ No. ") + `The answer is <b>${esc(w.word)}</b>`;
   g.cur = null;
-  setTimeout(() => { if (g.dead || wm.g !== g) return; if (g.timeUp || g.left <= 0) wmTurnEnd(); else wmYouAsk(); }, ok ? 900 : 2300);
+  wmAfterTalk(ok ? 900 : 2300).then(() => { if (g.dead || wm.g !== g) return; if (g.timeUp || g.left <= 0) wmTurnEnd(); else wmYouAsk(); });
 }
 function wmJudge(who, w, kind, ms){
   const g = wm.g, id = wmCid(who);
@@ -3798,7 +3813,7 @@ function wmJudge(who, w, kind, ms){
   else {
     const pose = g.bad >= 3 ? "angry" : g.bad >= 2 || kind === "pass" ? "sweat" : "wrong";
     wmCon(id, pose, {box:"fx-shake", p:pose === "angry" ? ["steam"] : pose === "sweat" ? ["sweat"] : []}, 2000, g.bad >= 2 ? "sweat" : "idle");
-    const t = (kind === "pass" ? "Pass. " : "No. ") + "It's " + w.word + "."; wmQM(kind === "pass" ? "sigh" : "no", t, 2000); wmSay(t);
+    const t = wmAnsLine(kind, w); wmQM(kind === "pass" ? "sigh" : "no", t, 2000); wmSay(t);
   }
 }
 const wmSleep = ms => new Promise(r => setTimeout(r, wm.g && wm.g.skip ? 0 : ms));
@@ -3827,7 +3842,7 @@ async function wmCpuTurn(){
     }
     if (g.dead || wm.g !== g) return;
     wmJudge("opp", w, kind, think);
-    if (!g.skip){ const fb = $("wm-fb"); if (fb){ fb.className = "wm-fb " + (kind === "right" ? "ok" : "no"); fb.innerHTML = kind === "right" ? "✓ Correct" : (kind === "pass" ? "Pass. " : "✗ No. ") + `The answer is <b>${esc(w.word)}</b>`; } await wmSleep(kind === "right" ? 1000 : 2100); }
+    if (!g.skip){ const fb = $("wm-fb"); if (fb){ fb.className = "wm-fb " + (kind === "right" ? "ok" : "no"); fb.innerHTML = kind === "right" ? "✓ Correct" : (kind === "pass" ? "Pass. " : "✗ No. ") + `The answer is <b>${esc(w.word)}</b>`; } await wmAfterTalk(kind === "right" ? 1000 : 2100); }
     if (g.timeUp) break;
   }
   if (!g.dead && wm.g === g) wmTurnEnd();
